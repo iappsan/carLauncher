@@ -28,6 +28,8 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private val SPANISH: Locale = Locale.forLanguageTag("es")
+
 /**
  * Reloj grande + fecha. Se actualiza justo al cambiar el minuto (un único "despertar" por minuto,
  * nada de refrescos por segundo).
@@ -49,10 +51,9 @@ fun ClockHeader(modifier: Modifier = Modifier) {
     val is24h = DateFormat.is24HourFormat(context)
     val timeFormat = remember(is24h) { DateTimeFormatter.ofPattern(if (is24h) "HH:mm" else "h:mm") }
     val amPmFormat = remember(locale) { DateTimeFormatter.ofPattern("a", locale) }
-    // Patrón de fecha adecuado al idioma, p. ej. "lunes, 2 de noviembre" en español.
-    val dateFormat = remember(locale) {
-        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "EEEEdMMMM"), locale)
-    }
+    // Fecha fija tipo "02/NOVIEMBRE/2026". El mes va en español como el resto de la interfaz,
+    // aunque el estéreo esté en otro idioma.
+    val dateFormat = remember { DateTimeFormatter.ofPattern("dd/MMMM/yyyy", SPANISH) }
 
     // Con imagen de fondo, una sombra suave hace legible el texto sobre cualquier zona de la foto.
     val shadow = if (LauncherTheme.current.backgroundImage != null) {
@@ -80,9 +81,8 @@ fun ClockHeader(modifier: Modifier = Modifier) {
                 Text(now.format(amPmFormat), style = MaterialTheme.typography.titleLarge.copy(shadow = shadow), color = color)
             }
             Text(
-                // replaceFirstChar: "lunes" → "Lunes"
-                text = now.format(dateFormat).replaceFirstChar { it.titlecase(locale) },
-                style = MaterialTheme.typography.titleLarge.copy(shadow = shadow),
+                text = now.format(dateFormat).uppercase(SPANISH),
+                style = MaterialTheme.typography.bodyMedium.copy(shadow = shadow),
                 color = color.copy(alpha = 0.85f),
             )
         }
