@@ -20,6 +20,12 @@
         android:required="false" />
 
     <!-- Android 11+: visibilidad de las apps que aparecen en un launcher -->
+    <!-- Un launcher necesita ver todas las apps (Android 11+); algunos estéreos filtran LauncherApps
+         y hay que buscar también con PackageManager. -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />

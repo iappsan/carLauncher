@@ -91,12 +91,45 @@ class AppRepository(private val context: Context) : IconLoader {
     /** Apps lanzables ordenadas alfabéticamente (sin este launcher). Llamar fuera del hilo principal. */
     fun installedApps(): List<AppEntry> = cachedApps ?: loadApps().also { cachedApps = it }
 
+    /**
+     * Junta varias fuentes porque el firmware de algunos estéreos filtra [LauncherApps]
+     * (p. ej. no devuelve Play Store aunque esté instalada):
+     * 1. LauncherApps (la API oficial para launchers).
+     * 2. PackageManager con MAIN/LAUNCHER y MAIN/LEANBACK_LAUNCHER (apps tipo TV).
+     * 3. Cualquier app instalada con actividad de inicio (`getLaunchIntentForPackage`, incluye CATEGORY_INFO).
+     * Se queda una entrada por actividad; las fuentes 2–3 solo añaden packages que aún no aparecen.
+     */
     private fun loadApps(): List<AppEntry> {
+        // LinkedHashMap: sin duplicados por componente, conservando el orden de inserción.
+        val byComponent = LinkedHashMap<ComponentName, AppEntry>()
+        fun add(entry: AppEntry) {
+            if (entry.packageName != context.packageName) byComponent.putIfAbsent(entry.component, entry)
+        }
+
+        launcherApps.getActivityList(null, user).forEach {
+            add(AppEntry(it.applicationInfo.packageName, it.label.toString(), it.componentName))
+        }
+
+        val known = { pkg: String -> byComponent.values.any { it.packageName == pkg } }
+        listOf(Intent.CATEGORY_LAUNCHER, Intent.CATEGORY_LEANBACK_LAUNCHER).forEach { category ->
+            @Suppress("DEPRECATION") // la variante con ResolveInfoFlags es de API 33
+            pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(category), 0).forEach { info ->
+                val activity = info.activityInfo
+                if (activity.enabled && activity.exported && !known(activity.packageName)) {
+                    add(AppEntry(activity.packageName, info.loadLabel(pm).toString(), ComponentName(activity.packageName, activity.name)))
+                }
+            }
+        }
+
+        @Suppress("DEPRECATION")
+        pm.getInstalledApplications(0).forEach { app ->
+            if (!app.enabled || known(app.packageName)) return@forEach // `return@forEach` = `continue`
+            val component = pm.getLaunchIntentForPackage(app.packageName)?.component ?: return@forEach
+            add(AppEntry(app.packageName, app.loadLabel(pm).toString(), component))
+        }
+
         val collator = Collator.getInstance() // orden según el idioma: "Ñ" tras "N", ignora acentos
-        return launcherApps.getActivityList(null, user)
-            .filter { it.applicationInfo.packageName != context.packageName }
-            .map { AppEntry(it.applicationInfo.packageName, it.label.toString(), it.componentName) }
-            .sortedWith(compareBy(collator) { it.label })
+        return byComponent.values.sortedWith(compareBy(collator) { it.label })
     }
 
     override fun cached(packageName: String): ImageBitmap? = iconCache.get(packageName)
@@ -130,13 +163,26 @@ class AppRepository(private val context: Context) : IconLoader {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
         }
 
-    /** Abre una actividad del cajón. Devuelve `false` si no se pudo. */
+    /**
+     * Abre una actividad del cajón. Devuelve `false` si no se pudo.
+     * Las que no vienen de LauncherApps (ver [loadApps]) se rechazan ahí con SecurityException,
+     * así que se reintenta con un Intent explícito normal.
+     */
     fun launch(component: ComponentName): Boolean = try {
         launcherApps.startMainActivity(component, user, null, null)
         true
-    } catch (_: ActivityNotFoundException) {
-        false
-    } catch (_: SecurityException) {
-        false
+    } catch (_: Exception) {
+        try {
+            context.startActivity(
+                Intent(Intent.ACTION_MAIN)
+                    .setComponent(component)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED),
+            )
+            true
+        } catch (_: ActivityNotFoundException) {
+            false
+        } catch (_: SecurityException) {
+            false
+        }
     }
 }
