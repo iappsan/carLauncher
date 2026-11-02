@@ -1,0 +1,34 @@
+# Desarrollo y pruebas
+
+## Compilar
+```bash
+gradlew.bat assembleDebug
+```
+Si Gradle elige un JRE sin `jlink` (p. ej. el de la extensión Java de VS Code):
+```bash
+gradlew.bat assembleDebug "-Dorg.gradle.java.installations.auto-detect=false" "-Dorg.gradle.java.installations.paths=C:\Program Files\Java\jdk-25.0.5.0.2"
+```
+
+## Emulador
+AVD `Car_HeadUnit_1024x600` (1024×600, 160 dpi, horizontal, Android 37 con Play Store).
+```bash
+%LOCALAPPDATA%\Android\Sdk\emulator\emulator.exe -avd Car_HeadUnit_1024x600
+```
+Probar 1280×720 sin otro AVD: `adb shell wm size 1280x720` / `adb shell wm density 213` (y `reset` para volver).
+
+## Instalar y fijar como launcher
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell cmd package set-home-activity com.iappsan.carlauncher/.MainActivity
+```
+
+## Acceso a notificaciones (widget de música)
+Normalmente se concede desde el botón "Dar permiso" del widget. Si el head unit no tiene esa
+pantalla de ajustes, se puede conceder por adb:
+```bash
+adb shell cmd notification allow_listener com.iappsan.carlauncher/com.iappsan.carlauncher.data.media.MediaListenerService
+```
+Revocar: `disallow_listener` con el mismo argumento.
+
+En Android 13+, si la APK se instaló desde un gestor de archivos (no por adb ni tienda), Android
+bloquea este permiso como "ajuste restringido": Información de la app → menú ⋮ → "Permitir ajustes restringidos".

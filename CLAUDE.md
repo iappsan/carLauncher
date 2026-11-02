@@ -25,16 +25,18 @@ El autor es desarrollador Java/Spring Boot con poca experiencia en Kotlin: al es
   - `data` — modelos, apps instaladas, iconos, configuración.
   - `ui/home` — pantalla principal.
   - `ui/drawer` — cajón de apps (fase 2).
-  - `ui/media` — widget de música (fase 3).
+  - `data/media` — servicio de notificaciones y sesiones multimedia.
+  - `ui/media` — widget de música.
   - `ui/theme` — tema Compose base (colores/tipografía).
   - `theme` — motor de temas `theme.json` (fase 4).
 - Textos de UI en español.
+- Comandos de adb, emulador y permisos: `docs/DEVELOPMENT.md`.
 - Compilar: `./gradlew assembleDebug` (Windows: `gradlew.bat assembleDebug`).
 - Un commit de git al final de cada fase. Esperar confirmación del usuario antes de empezar la siguiente fase.
 
 ## Plan por fases
 - **Fase 1 – Base** ✅: manifest como launcher (HOME/DEFAULT + LAUNCHER durante desarrollo, singleTask, landscape, `<queries>`), Home oscuro con rejilla de accesos grandes (Maps, Waze, Spotify, YouTube Music, Ajustes) + botón "Apps", Toast si la app no está instalada, "atrás" bloqueado.
 - **Fase 2 – Cajón de apps** ✅: `LauncherApps` (con callback de instalación/desinstalación → `AppRepository.changes`), orden alfabético con `Collator`, búsqueda sin acentos, iconos asíncronos con caché (`IconLoader`), pulsación larga → "Agregar a Home" / "Información de la app"; en Home, pulsación larga → "Quitar de Home" (el botón "Apps" no se puede quitar). Accesos persistidos en DataStore (`ShortcutRepository`).
-- **Fase 3 – Widget de música**: `NotificationListenerService` + `MediaSessionManager`, pantalla para pedir acceso a notificaciones, controles y carátula.
+- **Fase 3 – Widget de música** ✅: `data/media/MediaListenerService` (vacío, solo para el permiso) + `MediaRepository` (sesiones activas, elige la que suena, carátula reducida), escucha solo entre onStart/onStop. Widget a la izquierda de Home (38% del ancho) con panel de permiso, estado vacío y controles grandes; iconos vectoriales propios (`MediaIcons`). Carátulas solo por Bitmap (no `ART_URI`) por ahora.
 - **Fase 4 – Motor de temas**: esquema `theme.json` + data class (kotlinx.serialization), carga desde almacenamiento externo de la app, aplicación a `ColorScheme` y layout, selector en ajustes, documentación en `docs/THEMES.md`.
 - **Fase 5 – Pulido**: día/noche, reloj grande, ajustes del launcher (columnas, accesos, tema), revisión de rendimiento.

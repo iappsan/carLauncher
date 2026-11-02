@@ -4,11 +4,13 @@ import android.app.Application
 import android.content.Context
 import com.iappsan.carlauncher.data.AppRepository
 import com.iappsan.carlauncher.data.ShortcutRepository
+import com.iappsan.carlauncher.data.media.MediaRepository
 
 /** Inyección de dependencias manual: un único lugar donde se crean los singletons de la app. */
 class AppContainer(context: Context) {
     val appRepository = AppRepository(context)
     val shortcutRepository = ShortcutRepository(context)
+    val mediaRepository = MediaRepository(context)
 }
 
 class CarLauncherApp : Application() {

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,26 +49,35 @@ import com.iappsan.carlauncher.ui.theme.CarLauncherTheme
 private val MinTileHeight = 80.dp
 private val TileSpacing = 16.dp
 
+/** Fracción del ancho para el widget de música (el resto, para los accesos). */
+private const val MediaPanelWeight = 0.38f
+
 @Composable
 fun HomeScreen(
     state: HomeUiState,
     onShortcutClick: (Shortcut) -> Unit,
     onShortcutRemove: (Shortcut) -> Unit,
     modifier: Modifier = Modifier,
+    // "Slot": quien llama decide qué se pinta a la izquierda (el widget de música).
+    // `@Composable () -> Unit` = una función composable pasada como parámetro.
+    mediaPanel: @Composable () -> Unit = {},
 ) {
-    Box(
+    Row(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             // Deja espacio para barras del sistema / recortes de pantalla
             .safeDrawingPadding()
             .padding(TileSpacing),
+        horizontalArrangement = Arrangement.spacedBy(TileSpacing),
     ) {
+        Box(Modifier.weight(MediaPanelWeight).fillMaxHeight()) { mediaPanel() }
         ShortcutGrid(
             items = state.items,
             columns = state.columns,
             onShortcutClick = onShortcutClick,
             onShortcutRemove = onShortcutRemove,
+            modifier = Modifier.weight(1f - MediaPanelWeight),
         )
     }
 }
@@ -82,12 +92,13 @@ private fun ShortcutGrid(
     columns: Int,
     onShortcutClick: (Shortcut) -> Unit,
     onShortcutRemove: (Shortcut) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    if (items.isEmpty()) return
     val rows = items.chunked(columns)
 
     // BoxWithConstraints expone maxWidth/maxHeight del espacio disponible (en dp).
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        if (rows.isEmpty()) return@BoxWithConstraints
         val fittedHeight: Dp = (maxHeight - TileSpacing * (rows.size - 1)) / rows.size
         val tileHeight = max(MinTileHeight, fittedHeight)
 

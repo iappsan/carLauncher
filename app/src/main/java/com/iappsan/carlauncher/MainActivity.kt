@@ -1,7 +1,9 @@
 package com.iappsan.carlauncher
 
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
@@ -25,11 +27,15 @@ import androidx.core.net.toUri
 import com.iappsan.carlauncher.data.AppEntry
 import com.iappsan.carlauncher.data.Shortcut
 import com.iappsan.carlauncher.data.ShortcutTarget
+import com.iappsan.carlauncher.data.media.MediaListenerService
 import com.iappsan.carlauncher.ui.drawer.DrawerActions
 import com.iappsan.carlauncher.ui.drawer.DrawerScreen
 import com.iappsan.carlauncher.ui.drawer.DrawerViewModel
 import com.iappsan.carlauncher.ui.home.HomeScreen
 import com.iappsan.carlauncher.ui.home.HomeViewModel
+import com.iappsan.carlauncher.ui.media.MediaActions
+import com.iappsan.carlauncher.ui.media.MediaViewModel
+import com.iappsan.carlauncher.ui.media.MediaWidget
 import com.iappsan.carlauncher.ui.theme.CarLauncherTheme
 
 class MainActivity : ComponentActivity() {
@@ -39,6 +45,7 @@ class MainActivity : ComponentActivity() {
     // `by viewModels { ... }` = delegado que crea/recupera el ViewModel usando nuestra factory.
     private val homeViewModel: HomeViewModel by viewModels { HomeViewModel.factory(container) }
     private val drawerViewModel: DrawerViewModel by viewModels { DrawerViewModel.factory(container) }
+    private val mediaViewModel: MediaViewModel by viewModels { MediaViewModel.factory(container) }
 
     /** Navegación mínima sin librería: el cajón se pinta encima de Home cuando es `true`. */
     private var showDrawer by mutableStateOf(false)
@@ -59,6 +66,10 @@ class MainActivity : ComponentActivity() {
                         state = homeState,
                         onShortcutClick = ::onShortcutClick,
                         onShortcutRemove = homeViewModel::removeShortcut,
+                        mediaPanel = {
+                            val mediaState by mediaViewModel.state.collectAsState()
+                            MediaWidget(state = mediaState, actions = mediaActions)
+                        },
                     )
                     AnimatedVisibility(
                         visible = showDrawer,
@@ -78,6 +89,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    // Solo escuchamos las sesiones de música mientras el launcher está visible.
+    override fun onStart() {
+        super.onStart()
+        mediaViewModel.onVisible()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        mediaViewModel.onHidden()
     }
 
     /** Pulsar Home estando ya en el launcher (p. ej. con el cajón abierto) vuelve a la pantalla principal. */
@@ -112,6 +134,45 @@ class MainActivity : ComponentActivity() {
         )
 
         override fun onClose() = closeDrawer()
+    }
+
+    private val mediaActions = object : MediaActions {
+        override fun onPlayPause() = mediaViewModel.playPause()
+        override fun onNext() = mediaViewModel.next()
+        override fun onPrevious() = mediaViewModel.previous()
+
+        override fun onOpenPlayer(packageName: String) {
+            container.appRepository.launchIntent(packageName)?.let { startSafely(it, packageName) }
+        }
+
+        override fun onRequestPermission() = requestNotificationAccess()
+    }
+
+    /**
+     * Abre la pantalla del sistema para conceder acceso a notificaciones. Al volver, onStart
+     * vuelve a comprobar el permiso. Algunos head units no traen esta pantalla: ver docs/DEVELOPMENT.md.
+     */
+    private fun requestNotificationAccess() {
+        val component = ComponentName(this, MediaListenerService::class.java)
+        val candidates = buildList {
+            // Android 11+: directamente a la página de este servicio
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                add(
+                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+                        .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, component.flattenToString())
+                )
+            }
+            add(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        }
+        for (intent in candidates) {
+            try {
+                startActivity(intent)
+                return
+            } catch (_: ActivityNotFoundException) {
+                // probar la siguiente
+            }
+        }
+        toast(getString(R.string.media_permission_unavailable))
     }
 
     private fun onShortcutClick(shortcut: Shortcut) {
