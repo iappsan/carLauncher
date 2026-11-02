@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.iappsan.carlauncher.AppContainer
 import com.iappsan.carlauncher.data.AppEntry
 import com.iappsan.carlauncher.data.AppRepository
+import com.iappsan.carlauncher.data.ShortcutList
 import com.iappsan.carlauncher.data.ShortcutRepository
 import com.iappsan.carlauncher.data.ShortcutTarget
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,8 @@ data class DrawerUiState(
     val apps: List<AppEntry> = emptyList(),
     /** Packages que ya tienen acceso en Home. */
     val homePackages: Set<String> = emptySet(),
+    /** Packages que ya tienen acceso en la vista de navegación. */
+    val navPackages: Set<String> = emptySet(),
     val loading: Boolean = true,
 )
 
@@ -45,15 +48,20 @@ class DrawerViewModel(
 
     private val allApps = appRepository.changes.map { appRepository.installedApps() }
 
-    private val homePackages = shortcutRepository.shortcuts.map { shortcuts ->
+    private fun packagesIn(list: ShortcutList) = shortcutRepository.shortcuts(list).map { shortcuts ->
         // `as?` = cast seguro: devuelve null si no es de ese tipo (mapNotNull los descarta).
         shortcuts.mapNotNullTo(HashSet()) { (it.target as? ShortcutTarget.App)?.packageName }
     }
 
     val state: StateFlow<DrawerUiState> =
         // snapshotFlow convierte un estado de Compose en un Flow que emite al cambiar.
-        combine(allApps, snapshotFlow { query }, homePackages) { apps, q, onHome ->
-            DrawerUiState(apps = filter(apps, q), homePackages = onHome, loading = false)
+        combine(
+            allApps,
+            snapshotFlow { query },
+            packagesIn(ShortcutList.Home),
+            packagesIn(ShortcutList.Navigation),
+        ) { apps, q, onHome, onNav ->
+            DrawerUiState(apps = filter(apps, q), homePackages = onHome, navPackages = onNav, loading = false)
         }
             .flowOn(Dispatchers.Default)
             // WhileSubscribed: deja de trabajar 5 s después de cerrar el cajón.
@@ -63,8 +71,8 @@ class DrawerViewModel(
         query = value
     }
 
-    fun addToHome(app: AppEntry) {
-        viewModelScope.launch { shortcutRepository.addApp(app.packageName, app.label) }
+    fun addTo(list: ShortcutList, app: AppEntry) {
+        viewModelScope.launch { shortcutRepository.addApp(list, app.packageName, app.label) }
     }
 
     private fun filter(apps: List<AppEntry>, query: String): List<AppEntry> {

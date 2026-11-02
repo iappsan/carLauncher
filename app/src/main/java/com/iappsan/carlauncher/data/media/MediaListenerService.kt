@@ -1,12 +1,34 @@
 package com.iappsan.carlauncher.data.media
 
 import android.service.notification.NotificationListenerService
+import android.service.notification.StatusBarNotification
+import com.iappsan.carlauncher.CarLauncherApp
 
 /**
- * Servicio vacío a propósito: no leemos notificaciones.
+ * Acceso a notificaciones del launcher. Sirve para dos cosas:
+ * 1. Poder llamar a `MediaSessionManager.getActiveSessions()` (widget de música): Android solo lo
+ *    permite a apps con un NotificationListenerService concedido.
+ * 2. Leer la guía de Maps/Waze (tarjeta de maniobra). Solo se procesan las notificaciones de apps de
+ *    navegación conocidas (ver NavigationRepository); el resto se ignora.
  *
- * Android solo deja llamar a `MediaSessionManager.getActiveSessions()` a apps que tengan
- * un NotificationListenerService con permiso concedido por el usuario. Este servicio
- * existe únicamente para poder pedir ese permiso y pasar su ComponentName a esa API.
+ * (Conserva el nombre de la fase 3 para no perder el permiso ya concedido.)
  */
-class MediaListenerService : NotificationListenerService()
+class MediaListenerService : NotificationListenerService() {
+
+    private val navigation get() = (application as CarLauncherApp).container.navigationRepository
+
+    override fun onListenerConnected() {
+        val current = try {
+            activeNotifications
+        } catch (_: SecurityException) {
+            null
+        }
+        navigation.replaceAll(current.orEmpty())
+    }
+
+    override fun onListenerDisconnected() = navigation.clear()
+
+    override fun onNotificationPosted(sbn: StatusBarNotification) = navigation.onPosted(sbn)
+
+    override fun onNotificationRemoved(sbn: StatusBarNotification) = navigation.onRemoved(sbn)
+}

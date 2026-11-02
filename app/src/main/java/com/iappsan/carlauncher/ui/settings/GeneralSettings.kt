@@ -12,6 +12,9 @@ import androidx.compose.ui.res.stringResource
 import com.iappsan.carlauncher.R
 import com.iappsan.carlauncher.data.DayNightMode
 import com.iappsan.carlauncher.data.LauncherSettings
+import com.iappsan.carlauncher.data.SpeedUnit
+import com.iappsan.carlauncher.data.location.SunTimes
+import java.time.format.DateTimeFormatter
 
 @Composable
 internal fun DisplaySettings(settings: LauncherSettings, actions: SettingsActions) {
@@ -34,17 +37,38 @@ internal fun DisplaySettings(settings: LauncherSettings, actions: SettingsAction
                 onSelect = actions::onColumnsChange,
             )
         }
+        SectionSpacer()
+        SwitchCard(
+            title = stringResource(R.string.settings_speed),
+            description = stringResource(R.string.settings_speed_desc),
+            checked = settings.showSpeed,
+            onCheckedChange = actions::onShowSpeedChange,
+        )
+        SectionSpacer()
+        SettingCard(title = stringResource(R.string.settings_speed_unit)) {
+            ChoiceRow(
+                options = SpeedUnit.entries.map { it to it.label },
+                selected = settings.speedUnit,
+                onSelect = actions::onSpeedUnitChange,
+                enabled = settings.showSpeed,
+            )
+        }
     }
 }
 
 @Composable
 internal fun DayNightSettings(
     settings: LauncherSettings,
+    sunTimes: SunTimes?,
     isNight: Boolean,
     themeHasDayVariant: Boolean,
     actions: SettingsActions,
 ) {
-    val auto = settings.dayNightMode == DayNightMode.Auto
+    val mode = settings.dayNightMode
+    // El horario se usa en modo "horario" y como respaldo de "por sol" mientras no hay ubicación.
+    val scheduleInUse = mode == DayNightMode.Auto || (mode == DayNightMode.Sun && sunTimes == null)
+    val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
+
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         SettingCard(
             title = stringResource(R.string.settings_mode),
@@ -52,11 +76,12 @@ internal fun DayNightSettings(
         ) {
             ChoiceRow(
                 options = listOf(
+                    DayNightMode.Sun to stringResource(R.string.settings_mode_sun),
                     DayNightMode.Auto to stringResource(R.string.settings_mode_auto),
                     DayNightMode.AlwaysNight to stringResource(R.string.settings_mode_night),
                     DayNightMode.AlwaysDay to stringResource(R.string.settings_mode_day),
                 ),
-                selected = settings.dayNightMode,
+                selected = mode,
                 onSelect = actions::onDayNightModeChange,
             )
             Text(
@@ -64,6 +89,19 @@ internal fun DayNightSettings(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
+            if (mode == DayNightMode.Sun) {
+                val sunText = when {
+                    sunTimes == null -> stringResource(R.string.settings_sun_no_location)
+                    sunTimes.polarDay -> stringResource(R.string.settings_sun_polar_day)
+                    sunTimes.polarNight -> stringResource(R.string.settings_sun_polar_night)
+                    else -> stringResource(
+                        R.string.settings_sun_times,
+                        sunTimes.sunrise!!.format(timeFormat),
+                        sunTimes.sunset!!.format(timeFormat),
+                    )
+                }
+                Text(sunText, style = MaterialTheme.typography.bodyLarge)
+            }
             if (!themeHasDayVariant) {
                 Text(
                     stringResource(R.string.settings_no_day_variant),
@@ -74,8 +112,8 @@ internal fun DayNightSettings(
         }
         SectionSpacer()
         SettingCard(title = stringResource(R.string.settings_schedule)) {
-            HourStepper(stringResource(R.string.settings_day_start), settings.dayStartHour, auto, actions::onDayStartChange)
-            HourStepper(stringResource(R.string.settings_night_start), settings.nightStartHour, auto, actions::onNightStartChange)
+            HourStepper(stringResource(R.string.settings_day_start), settings.dayStartHour, scheduleInUse, actions::onDayStartChange)
+            HourStepper(stringResource(R.string.settings_night_start), settings.nightStartHour, scheduleInUse, actions::onNightStartChange)
         }
     }
 }

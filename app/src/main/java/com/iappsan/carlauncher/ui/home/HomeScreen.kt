@@ -1,5 +1,6 @@
 package com.iappsan.carlauncher.ui.home
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import com.iappsan.carlauncher.R
 import com.iappsan.carlauncher.data.Shortcut
+import com.iappsan.carlauncher.data.ShortcutList
 import com.iappsan.carlauncher.data.ShortcutTarget
 import com.iappsan.carlauncher.ui.icons.LauncherIcons
 import com.iappsan.carlauncher.ui.theme.CarLauncherTheme
@@ -55,13 +58,26 @@ private val MinTileHeight = 80.dp
 fun HomeScreen(
     state: HomeUiState,
     onShortcutClick: (Shortcut) -> Unit,
-    onShortcutRemove: (Shortcut) -> Unit,
+    onShortcutRemove: (ShortcutList, Shortcut) -> Unit,
     modifier: Modifier = Modifier,
-    // "Slot": quien llama decide qué se pinta a la izquierda (el widget de música).
+    /** Hay una ruta activa: se muestra la vista de navegación. */
+    navigating: Boolean = false,
+    // "Slots": quien llama decide qué se pinta en cada zona.
     // `@Composable () -> Unit` = una función composable pasada como parámetro.
+    /** Panel izquierdo en la vista normal (widget de música). */
     mediaPanel: @Composable () -> Unit = {},
+    /** Panel izquierdo en la vista de navegación (tarjeta de maniobra). */
+    navigationPanel: @Composable () -> Unit = {},
+    /** Barra inferior en la vista de navegación (música compacta). */
+    mediaBar: @Composable () -> Unit = {},
+    /** Lo que va a la derecha del reloj (velocímetro, Bluetooth). `RowScope` permite usar weight/align. */
+    headerExtras: @Composable RowScope.() -> Unit = {},
 ) {
     val layout = LauncherTheme.layout
+    // En navegación siempre hay panel izquierdo, aunque el tema oculte el widget de música.
+    val panelWeight = if (navigating) maxOf(layout.mediaPanelWeight, 0.38f) else layout.mediaPanelWeight
+    val list = if (navigating) ShortcutList.Navigation else ShortcutList.Home
+
     // Sin fondo propio: lo pinta ThemeBackground detrás (color o imagen del tema).
     Row(
         modifier = modifier
@@ -71,22 +87,29 @@ fun HomeScreen(
             .padding(layout.spacing),
         horizontalArrangement = Arrangement.spacedBy(layout.spacing),
     ) {
-        // Un tema puede ocultar el widget con mediaPanelWeight = 0
-        if (layout.mediaPanelWeight > 0f) {
-            Box(Modifier.weight(layout.mediaPanelWeight).fillMaxHeight()) { mediaPanel() }
+        if (panelWeight > 0f) {
+            // Crossfade: transición suave al empezar/terminar una ruta
+            Crossfade(targetState = navigating, modifier = Modifier.weight(panelWeight).fillMaxHeight(), label = "panel") { nav ->
+                Box(Modifier.fillMaxSize()) { if (nav) navigationPanel() else mediaPanel() }
+            }
         }
         Column(
-            modifier = Modifier.weight(1f - layout.mediaPanelWeight),
+            modifier = Modifier.weight(1f - panelWeight),
             verticalArrangement = Arrangement.spacedBy(layout.spacing / 2),
         ) {
-            if (state.showClock) ClockHeader()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (state.showClock) ClockHeader()
+                Spacer(Modifier.weight(1f))
+                headerExtras()
+            }
             ShortcutGrid(
-                items = state.items,
+                items = if (navigating) state.navItems else state.items,
                 columns = layout.columns,
                 onShortcutClick = onShortcutClick,
-                onShortcutRemove = onShortcutRemove,
+                onShortcutRemove = { onShortcutRemove(list, it) },
                 modifier = Modifier.weight(1f),
             )
+            if (navigating) mediaBar()
         }
     }
 }
@@ -237,6 +260,6 @@ private fun HomeScreenPreview() {
         Shortcut.Drawer,
     ).map { ShortcutItem(it, icon = null, available = it.label != "Waze") }
     CarLauncherTheme {
-        HomeScreen(state = HomeUiState(items = items), onShortcutClick = {}, onShortcutRemove = {})
+        HomeScreen(state = HomeUiState(items = items), onShortcutClick = {}, onShortcutRemove = { _, _ -> })
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,15 +31,36 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.iappsan.carlauncher.R
 import com.iappsan.carlauncher.data.Shortcut
+import com.iappsan.carlauncher.data.ShortcutList
 import com.iappsan.carlauncher.data.ShortcutTarget
 import com.iappsan.carlauncher.ui.icons.LauncherIcons
 
 @Composable
-internal fun ShortcutSettings(shortcuts: List<Shortcut>, actions: SettingsActions) {
+internal fun ShortcutSettings(homeShortcuts: List<Shortcut>, navShortcuts: List<Shortcut>, actions: SettingsActions) {
+    // Qué lista se está editando: la de Home normal o la de la vista de navegación.
+    var list by rememberSaveable { mutableStateOf(ShortcutList.Home) }
+    val shortcuts = if (list == ShortcutList.Home) homeShortcuts else navShortcuts
     // Restaurar es destructivo: primer toque pide confirmación, el segundo lo hace.
-    var confirmReset by remember { mutableStateOf(false) }
+    var confirmReset by remember(list) { mutableStateOf(false) }
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item {
+            ChoiceRow(
+                options = listOf(
+                    ShortcutList.Home to stringResource(R.string.settings_list_home),
+                    ShortcutList.Navigation to stringResource(R.string.settings_list_navigation),
+                ),
+                selected = list,
+                onSelect = { list = it },
+            )
+        }
+        item {
+            Text(
+                stringResource(if (list == ShortcutList.Home) R.string.settings_list_home_desc else R.string.settings_list_navigation_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         item {
             Text(
                 stringResource(R.string.settings_shortcuts_hint),
@@ -48,6 +70,7 @@ internal fun ShortcutSettings(shortcuts: List<Shortcut>, actions: SettingsAction
         }
         itemsIndexed(shortcuts, key = { _, s -> s.id }) { index, shortcut ->
             ShortcutRow(
+                list = list,
                 shortcut = shortcut,
                 canMoveUp = index > 0,
                 canMoveDown = index < shortcuts.lastIndex,
@@ -57,7 +80,7 @@ internal fun ShortcutSettings(shortcuts: List<Shortcut>, actions: SettingsAction
         item {
             OutlinedButton(
                 onClick = {
-                    if (confirmReset) actions.onResetShortcuts()
+                    if (confirmReset) actions.onResetShortcuts(list)
                     confirmReset = !confirmReset
                 },
                 modifier = Modifier.height(56.dp),
@@ -72,7 +95,13 @@ internal fun ShortcutSettings(shortcuts: List<Shortcut>, actions: SettingsAction
 }
 
 @Composable
-private fun ShortcutRow(shortcut: Shortcut, canMoveUp: Boolean, canMoveDown: Boolean, actions: SettingsActions) {
+private fun ShortcutRow(
+    list: ShortcutList,
+    shortcut: Shortcut,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    actions: SettingsActions,
+) {
     Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
         Row(
             Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -93,17 +122,17 @@ private fun ShortcutRow(shortcut: Shortcut, canMoveUp: Boolean, canMoveDown: Boo
                 )
             }
             RowButton(LauncherIcons.ArrowUp, stringResource(R.string.settings_move_up), canMoveUp) {
-                actions.onMoveShortcut(shortcut.id, -1)
+                actions.onMoveShortcut(list, shortcut.id, -1)
             }
             RowButton(LauncherIcons.ArrowDown, stringResource(R.string.settings_move_down), canMoveDown) {
-                actions.onMoveShortcut(shortcut.id, +1)
+                actions.onMoveShortcut(list, shortcut.id, +1)
             }
             // El botón "Apps" no se puede quitar
             RowButton(
                 LauncherIcons.Close,
                 stringResource(R.string.remove_from_home),
                 enabled = shortcut.target != ShortcutTarget.AppDrawer,
-            ) { actions.onRemoveShortcut(shortcut.id) }
+            ) { actions.onRemoveShortcut(list, shortcut.id) }
         }
     }
 }

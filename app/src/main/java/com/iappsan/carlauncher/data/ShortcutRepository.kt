@@ -1,6 +1,7 @@
 package com.iappsan.carlauncher.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -10,8 +11,14 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 
+/** Las dos listas de accesos: la de Home normal y la que se ve mientras hay una ruta activa. */
+enum class ShortcutList(internal val key: String) {
+    Home("home_shortcuts"),
+    Navigation("nav_shortcuts"),
+}
+
 /**
- * Accesos de Home, persistidos en DataStore.
+ * Accesos de Home, persistidos en DataStore (una lista por [ShortcutList]).
  *
  * Formato guardado (una preferencia de texto, un acceso por línea, campos separados por TAB):
  * `app<TAB>com.waze<TAB>Waze`, `settings` o `apps`. Simple y sin librerías de JSON.
@@ -21,14 +28,14 @@ class ShortcutRepository(context: Context) {
     private val dataStore = context.settingsDataStore
 
     /** Lista actual de accesos; emite de nuevo cada vez que cambia. */
-    val shortcuts: Flow<List<Shortcut>> = dataStore.data
+    fun shortcuts(list: ShortcutList): Flow<List<Shortcut>> = dataStore.data
         // Si el fichero está corrupto o no se puede leer, seguimos con los valores por defecto.
         .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
-        .map { prefs -> prefs[KEY_SHORTCUTS]?.let(::decode) ?: DEFAULT_SHORTCUTS }
+        .map { prefs -> prefs.read(list) }
         .distinctUntilChanged()
 
     /** Agrega una app justo antes del botón "Apps". No hace nada si ya está. */
-    suspend fun addApp(packageName: String, label: String) = update { current ->
+    suspend fun addApp(list: ShortcutList, packageName: String, label: String) = update(list) { current ->
         val shortcut = Shortcut.app(packageName, label)
         if (current.any { it.id == shortcut.id }) return@update current
         val drawerIndex = current.indexOfFirst { it.target == ShortcutTarget.AppDrawer }
@@ -36,12 +43,12 @@ class ShortcutRepository(context: Context) {
     }
 
     /** Quita un acceso. El botón "Apps" no se puede quitar (sería imposible volver al cajón). */
-    suspend fun remove(id: String) = update { current ->
+    suspend fun remove(list: ShortcutList, id: String) = update(list) { current ->
         current.filterNot { it.id == id && it.target != ShortcutTarget.AppDrawer }
     }
 
     /** Mueve un acceso [delta] posiciones (-1 = antes, +1 = después). */
-    suspend fun move(id: String, delta: Int) = update { current ->
+    suspend fun move(list: ShortcutList, id: String, delta: Int) = update(list) { current ->
         val from = current.indexOfFirst { it.id == id }
         val to = from + delta
         if (from < 0 || to !in current.indices) return@update current
@@ -49,19 +56,19 @@ class ShortcutRepository(context: Context) {
     }
 
     /** Vuelve a la lista inicial de accesos. */
-    suspend fun resetToDefaults() = update { DEFAULT_SHORTCUTS }
+    suspend fun resetToDefaults(list: ShortcutList) = update(list) { defaultsFor(list) }
 
-    private suspend fun update(transform: (List<Shortcut>) -> List<Shortcut>) {
+    private suspend fun update(list: ShortcutList, transform: (List<Shortcut>) -> List<Shortcut>) {
         // edit{} es transaccional: lee, transforma y escribe de forma atómica.
         dataStore.edit { prefs ->
-            val current = prefs[KEY_SHORTCUTS]?.let(::decode) ?: DEFAULT_SHORTCUTS
-            prefs[KEY_SHORTCUTS] = encode(transform(current))
+            prefs[stringPreferencesKey(list.key)] = encode(transform(prefs.read(list)))
         }
     }
 
-    private companion object {
-        val KEY_SHORTCUTS = stringPreferencesKey("home_shortcuts")
+    private fun Preferences.read(list: ShortcutList): List<Shortcut> =
+        this[stringPreferencesKey(list.key)]?.let(::decode) ?: defaultsFor(list)
 
+    private companion object {
         val DEFAULT_SHORTCUTS = listOf(
             Shortcut.app("com.google.android.apps.maps", "Maps"),
             Shortcut.app("com.waze", "Waze"),
@@ -70,6 +77,20 @@ class ShortcutRepository(context: Context) {
             Shortcut.Settings,
             Shortcut.Drawer,
         )
+
+        /** En ruta: pocos botones y grandes (navegación y música). */
+        val DEFAULT_NAV_SHORTCUTS = listOf(
+            Shortcut.app("com.google.android.apps.maps", "Maps"),
+            Shortcut.app("com.waze", "Waze"),
+            Shortcut.app("com.spotify.music", "Spotify"),
+            Shortcut.app("com.google.android.apps.youtube.music", "YouTube Music"),
+            Shortcut.Drawer,
+        )
+
+        fun defaultsFor(list: ShortcutList) = when (list) {
+            ShortcutList.Home -> DEFAULT_SHORTCUTS
+            ShortcutList.Navigation -> DEFAULT_NAV_SHORTCUTS
+        }
 
         private val CONTROL_CHARS = Regex("[\\t\\r\\n]")
 

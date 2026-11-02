@@ -59,6 +59,26 @@ adb shell chmod -R a+rwX /sdcard/Android/data/com.iappsan.carlauncher/files/them
 Ojo: reinstalar la APK cuando cambian sus componentes (p. ej. un servicio nuevo) puede hacer que
 Android olvide el launcher preferido; vuelve a fijarlo con `set-home-activity`.
 
+## Probar velocímetro y día/noche por sol (GPS simulado)
+`geo fix <longitud> <latitud> [altitud] [satélites] [velocidad en nudos]` en la consola del emulador.
+Ejemplo: Ciudad de México a ~50 km/h (27 nudos):
+```bash
+adb emu geo fix -99.1332 19.4326 2240 8 27
+```
+Hay que enviar varias posiciones seguidas (cada segundo) para que la velocidad no caduque (5 s).
+
+## Probar la vista de navegación sin conducir
+Los builds **debug** aceptan como "ruta activa" notificaciones de `adb shell` cuyo tag empiece por `nav`
+(los release solo aceptan Maps, Waze y otras apps de navegación conocidas):
+```bash
+adb push flecha.png /data/local/tmp/flecha.png
+adb shell "cmd notification post -t '300 m' -I file:///data/local/tmp/flecha.png nav1 'Gira a la derecha hacia Av. Reforma'"
+```
+Para terminar la "ruta", posponer la notificación con su clave (sale en `adb shell dumpsys notification --noredact`):
+```bash
+adb shell "cmd notification snooze --for 600000 '0|com.android.shell|2020|nav1|2000'"
+```
+
 ## Acceso a notificaciones (widget de música)
 Normalmente se concede desde el botón "Dar permiso" del widget. Si el head unit no tiene esa
 pantalla de ajustes, se puede conceder por adb:

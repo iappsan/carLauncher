@@ -61,6 +61,7 @@ interface DrawerActions {
     fun onQueryChange(query: String)
     fun onLaunch(app: AppEntry)
     fun onAddToHome(app: AppEntry)
+    fun onAddToNavigation(app: AppEntry)
     fun onAppInfo(app: AppEntry)
     fun onOpenSettings()
     fun onClose()
@@ -108,6 +109,7 @@ fun DrawerScreen(
                         AppCell(
                             app = app,
                             onHome = app.packageName in state.homePackages,
+                        onNav = app.packageName in state.navPackages,
                             iconLoader = iconLoader,
                             actions = actions,
                         )
@@ -156,6 +158,7 @@ private fun SearchBar(
 private fun AppCell(
     app: AppEntry,
     onHome: Boolean,
+    onNav: Boolean,
     iconLoader: IconLoader,
     actions: DrawerActions,
 ) {
@@ -204,6 +207,16 @@ private fun AppCell(
                 },
             )
             DropdownMenuItem(
+                text = {
+                    Text(stringResource(if (onNav) R.string.already_on_navigation else R.string.add_to_navigation))
+                },
+                enabled = !onNav,
+                onClick = {
+                    menuOpen = false
+                    actions.onAddToNavigation(app)
+                },
+            )
+            DropdownMenuItem(
                 text = { Text(stringResource(R.string.app_info)) },
                 onClick = {
                     menuOpen = false
@@ -248,6 +261,7 @@ private fun DrawerScreenPreview() {
         override fun onQueryChange(query: String) {}
         override fun onLaunch(app: AppEntry) {}
         override fun onAddToHome(app: AppEntry) {}
+        override fun onAddToNavigation(app: AppEntry) {}
         override fun onAppInfo(app: AppEntry) {}
         override fun onOpenSettings() {}
         override fun onClose() {}

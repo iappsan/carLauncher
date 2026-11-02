@@ -33,8 +33,12 @@ import androidx.compose.ui.unit.dp
 import com.iappsan.carlauncher.R
 import com.iappsan.carlauncher.data.DayNightMode
 import com.iappsan.carlauncher.data.Shortcut
+import com.iappsan.carlauncher.data.ShortcutList
+import com.iappsan.carlauncher.data.SpeedUnit
+import com.iappsan.carlauncher.data.bluetooth.BluetoothState
 import com.iappsan.carlauncher.theme.ThemeEntry
 import com.iappsan.carlauncher.theme.ThemeSpec
+import com.iappsan.carlauncher.ui.driving.PermissionsState
 import com.iappsan.carlauncher.ui.theme.CarLauncherTheme
 
 interface SettingsActions {
@@ -43,6 +47,8 @@ interface SettingsActions {
     // Pantalla
     fun onShowClockChange(show: Boolean)
     fun onColumnsChange(columns: Int)
+    fun onShowSpeedChange(show: Boolean)
+    fun onSpeedUnitChange(unit: SpeedUnit)
 
     // Día y noche
     fun onDayNightModeChange(mode: DayNightMode)
@@ -50,9 +56,15 @@ interface SettingsActions {
     fun onNightStartChange(hour: Int)
 
     // Accesos
-    fun onMoveShortcut(id: String, delta: Int)
-    fun onRemoveShortcut(id: String)
-    fun onResetShortcuts()
+    fun onMoveShortcut(list: ShortcutList, id: String, delta: Int)
+    fun onRemoveShortcut(list: ShortcutList, id: String)
+    fun onResetShortcuts(list: ShortcutList)
+
+    // Conexiones
+    fun onRequestPermissions()
+    fun onRequestNotificationAccess()
+    fun onResumeMusicChange(resume: Boolean)
+    fun onBluetoothAppChange(packageName: String)
 
     // Tema
     fun onSelectTheme(id: String)
@@ -63,6 +75,7 @@ private enum class Section(val titleRes: Int) {
     Display(R.string.settings_section_display),
     DayNight(R.string.settings_section_day_night),
     Shortcuts(R.string.settings_section_shortcuts),
+    Connections(R.string.settings_section_connections),
     Theme(R.string.settings_theme),
 }
 
@@ -71,6 +84,8 @@ private enum class Section(val titleRes: Int) {
 fun SettingsScreen(
     state: SettingsUiState,
     themeState: ThemeSettingsState,
+    permissions: PermissionsState,
+    bluetooth: BluetoothState,
     actions: SettingsActions,
     modifier: Modifier = Modifier,
 ) {
@@ -103,11 +118,19 @@ fun SettingsScreen(
                         Section.Display -> DisplaySettings(state.settings, actions)
                         Section.DayNight -> DayNightSettings(
                             settings = state.settings,
+                            sunTimes = state.sunTimes,
                             isNight = themeState.isNight,
                             themeHasDayVariant = themeState.hasDayVariant,
                             actions = actions,
                         )
-                        Section.Shortcuts -> ShortcutSettings(state.shortcuts, actions)
+                        Section.Shortcuts -> ShortcutSettings(state.homeShortcuts, state.navShortcuts, actions)
+                        Section.Connections -> ConnectionSettings(
+                            settings = state.settings,
+                            permissions = permissions,
+                            bluetooth = bluetooth,
+                            bluetoothApps = state.bluetoothApps,
+                            actions = actions,
+                        )
                         Section.Theme -> ThemeSettings(themeState, actions)
                     }
                 }
@@ -139,21 +162,29 @@ private fun SectionItem(title: String, selected: Boolean, onClick: () -> Unit) {
 private fun SettingsScreenPreview() {
     CarLauncherTheme {
         SettingsScreen(
-            state = SettingsUiState(shortcuts = listOf(Shortcut.app("com.google.android.apps.maps", "Maps"), Shortcut.Drawer)),
+            state = SettingsUiState(homeShortcuts = listOf(Shortcut.app("com.google.android.apps.maps", "Maps"), Shortcut.Drawer)),
             themeState = ThemeSettingsState(
                 entries = listOf(ThemeEntry("builtin:default", ThemeSpec(name = "Default", author = "CarLauncher"))),
                 selectedId = "builtin:default",
             ),
+            permissions = PermissionsState(),
+            bluetooth = BluetoothState(supported = true),
             actions = object : SettingsActions {
                 override fun onClose() {}
                 override fun onShowClockChange(show: Boolean) {}
                 override fun onColumnsChange(columns: Int) {}
+                override fun onShowSpeedChange(show: Boolean) {}
+                override fun onSpeedUnitChange(unit: SpeedUnit) {}
                 override fun onDayNightModeChange(mode: DayNightMode) {}
                 override fun onDayStartChange(hour: Int) {}
                 override fun onNightStartChange(hour: Int) {}
-                override fun onMoveShortcut(id: String, delta: Int) {}
-                override fun onRemoveShortcut(id: String) {}
-                override fun onResetShortcuts() {}
+                override fun onMoveShortcut(list: ShortcutList, id: String, delta: Int) {}
+                override fun onRemoveShortcut(list: ShortcutList, id: String) {}
+                override fun onResetShortcuts(list: ShortcutList) {}
+                override fun onRequestPermissions() {}
+                override fun onRequestNotificationAccess() {}
+                override fun onResumeMusicChange(resume: Boolean) {}
+                override fun onBluetoothAppChange(packageName: String) {}
                 override fun onSelectTheme(id: String) {}
                 override fun onReloadThemes() {}
             },

@@ -56,6 +56,21 @@ object LauncherIcons {
         lineTo(12f, 13.41f); lineTo(17.59f, 19f); lineTo(19f, 17.59f); lineTo(13.41f, 12f); close()
     }
 
+    /** Flecha de navegación (cuando la notificación no trae la flecha de la maniobra). */
+    val Navigation: ImageVector = icon("Navigation") {
+        moveTo(12f, 2f); lineTo(4.5f, 20.29f); lineToRelative(0.71f, 0.71f)
+        lineTo(12f, 18f); lineToRelative(6.79f, 3f); lineToRelative(0.71f, -0.71f); close()
+    }
+
+    val Bluetooth: ImageVector = icon("Bluetooth") {
+        moveTo(17.71f, 7.71f); lineTo(12f, 2f); horizontalLineToRelative(-1f); verticalLineToRelative(7.59f)
+        lineTo(6.41f, 5f); lineTo(5f, 6.41f); lineTo(10.59f, 12f); lineTo(5f, 17.59f); lineTo(6.41f, 19f)
+        lineTo(11f, 14.41f); verticalLineTo(22f); horizontalLineToRelative(1f); lineToRelative(5.71f, -5.71f)
+        lineToRelative(-4.3f, -4.29f); close()
+        moveTo(13f, 5.83f); lineToRelative(1.88f, 1.88f); lineTo(13f, 9.59f); close()
+        moveTo(14.88f, 16.29f); lineTo(13f, 18.17f); verticalLineToRelative(-3.76f); close()
+    }
+
     // `PathBuilder.() -> Unit` = lambda "con receptor": dentro, `this` es el PathBuilder,
     // por eso se puede escribir moveTo(...) directamente (así funcionan los DSL de Kotlin).
     private fun icon(name: String, pathData: PathBuilder.() -> Unit): ImageVector =

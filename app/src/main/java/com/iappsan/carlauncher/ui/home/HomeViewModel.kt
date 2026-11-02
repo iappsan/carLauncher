@@ -9,8 +9,10 @@ import com.iappsan.carlauncher.AppContainer
 import com.iappsan.carlauncher.data.AppRepository
 import com.iappsan.carlauncher.data.LauncherSettingsRepository
 import com.iappsan.carlauncher.data.Shortcut
+import com.iappsan.carlauncher.data.ShortcutList
 import com.iappsan.carlauncher.data.ShortcutRepository
 import com.iappsan.carlauncher.data.ShortcutTarget
+import com.iappsan.carlauncher.data.SpeedUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +31,11 @@ data class ShortcutItem(
 
 data class HomeUiState(
     val items: List<ShortcutItem> = emptyList(),
+    /** Accesos de la vista de navegación (cuando hay una ruta activa). */
+    val navItems: List<ShortcutItem> = emptyList(),
     val showClock: Boolean = true,
+    val showSpeed: Boolean = true,
+    val speedUnit: SpeedUnit = SpeedUnit.Kmh,
 )
 
 class HomeViewModel(
@@ -40,22 +46,29 @@ class HomeViewModel(
 
     /**
      * Se recalcula solo cuando cambian los accesos guardados, las apps instaladas o los ajustes.
-     * `combine` emite cada vez que cualquiera de los dos flows emite; `stateIn` lo convierte
+     * `combine` emite cada vez que cualquiera de los flows emite; `stateIn` lo convierte
      * en un StateFlow que vive mientras viva el ViewModel (viewModelScope).
      */
     val state: StateFlow<HomeUiState> =
         combine(
-            shortcutRepository.shortcuts,
+            shortcutRepository.shortcuts(ShortcutList.Home),
+            shortcutRepository.shortcuts(ShortcutList.Navigation),
             appRepository.changes,
             settingsRepository.settings,
-        ) { shortcuts, _, settings ->
-            HomeUiState(items = resolve(shortcuts), showClock = settings.showClock)
+        ) { home, nav, _, settings ->
+            HomeUiState(
+                items = resolve(home),
+                navItems = resolve(nav),
+                showClock = settings.showClock,
+                showSpeed = settings.showSpeed,
+                speedUnit = settings.speedUnit,
+            )
         }
             .flowOn(Dispatchers.Default) // el trabajo de arriba (iconos, lista de apps) va en segundo plano
             .stateIn(viewModelScope, SharingStarted.Eagerly, HomeUiState())
 
-    fun removeShortcut(shortcut: Shortcut) {
-        viewModelScope.launch { shortcutRepository.remove(shortcut.id) }
+    fun removeShortcut(list: ShortcutList, shortcut: Shortcut) {
+        viewModelScope.launch { shortcutRepository.remove(list, shortcut.id) }
     }
 
     private fun resolve(shortcuts: List<Shortcut>): List<ShortcutItem> {

@@ -1,8 +1,10 @@
 package com.iappsan.carlauncher
 
+import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -13,6 +15,7 @@ import androidx.activity.addCallback
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -20,25 +23,38 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.core.net.toUri
 import com.iappsan.carlauncher.data.AppEntry
 import com.iappsan.carlauncher.data.DayNightMode
+import com.iappsan.carlauncher.data.ShortcutList
+import com.iappsan.carlauncher.data.SpeedUnit
 import com.iappsan.carlauncher.data.Shortcut
 import com.iappsan.carlauncher.data.ShortcutTarget
 import com.iappsan.carlauncher.data.media.MediaListenerService
 import com.iappsan.carlauncher.ui.drawer.DrawerActions
 import com.iappsan.carlauncher.ui.drawer.DrawerScreen
 import com.iappsan.carlauncher.ui.drawer.DrawerViewModel
+import com.iappsan.carlauncher.ui.driving.BluetoothIndicator
+import com.iappsan.carlauncher.ui.driving.DrivingViewModel
+import com.iappsan.carlauncher.ui.driving.NavigationCard
+import com.iappsan.carlauncher.ui.driving.SpeedReadout
 import com.iappsan.carlauncher.ui.home.HomeScreen
 import com.iappsan.carlauncher.ui.home.HomeViewModel
 import com.iappsan.carlauncher.ui.media.MediaActions
+import com.iappsan.carlauncher.ui.media.MediaBar
 import com.iappsan.carlauncher.ui.media.MediaViewModel
 import com.iappsan.carlauncher.ui.media.MediaWidget
 import com.iappsan.carlauncher.ui.settings.SettingsActions
@@ -48,6 +64,8 @@ import com.iappsan.carlauncher.ui.settings.ThemeSettingsState
 import com.iappsan.carlauncher.ui.theme.CarLauncherTheme
 import com.iappsan.carlauncher.ui.theme.ThemeBackground
 import com.iappsan.carlauncher.ui.theme.ThemeViewModel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -59,6 +77,18 @@ class MainActivity : ComponentActivity() {
     private val mediaViewModel: MediaViewModel by viewModels { MediaViewModel.factory(container) }
     private val themeViewModel: ThemeViewModel by viewModels { ThemeViewModel.factory(container) }
     private val settingsViewModel: SettingsViewModel by viewModels { SettingsViewModel.factory(container) }
+    private val drivingViewModel: DrivingViewModel by viewModels { DrivingViewModel.factory(container) }
+
+    /**
+     * Pide los permisos en tiempo de ejecución (ubicación y Bluetooth) y, al responder el usuario,
+     * reactiva GPS/Bluetooth. `registerForActivityResult` debe crearse antes de onCreate (por eso es un campo).
+     */
+    private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        drivingViewModel.onVisible()
+    }
+
+    // Para distinguir "nunca preguntado" de "denegado para siempre" en esta sesión.
+    private var permissionsAskedBefore = false
 
     /** Pantallas que se pintan encima de Home. */
     private enum class Overlay { None, Drawer, Settings }
@@ -72,6 +102,11 @@ class MainActivity : ComponentActivity() {
 
         // Un launcher nunca se cierra con "atrás": consumimos el evento sin hacer nada.
         onBackPressedDispatcher.addCallback(this) { /* no-op */ }
+
+        // La primera vez que arranca, pedir ubicación y Bluetooth (una sola vez; luego desde Ajustes).
+        lifecycleScope.launch {
+            if (!container.launcherSettingsRepository.markPermissionsAsked()) requestRuntimePermissions()
+        }
 
         setContent {
             // collectAsState convierte el StateFlow en estado de Compose: al cambiar, se repinta.
@@ -96,13 +131,43 @@ class MainActivity : ComponentActivity() {
                 BackHandler(enabled = overlay != Overlay.None) { closeOverlay() }
                 Box {
                     ThemeBackground()
+                    val navigation by drivingViewModel.navigation.collectAsState()
+                    val speedKmh by drivingViewModel.speedKmh.collectAsState()
+                    val bluetooth by drivingViewModel.bluetooth.collectAsState()
+                    val permissions by drivingViewModel.permissions.collectAsState()
+                    // Copia local: así Kotlin sabe que no cambia y permite usarla como no-null (smart cast).
+                    val nav = navigation
                     HomeScreen(
                         state = homeState,
                         onShortcutClick = ::onShortcutClick,
                         onShortcutRemove = homeViewModel::removeShortcut,
+                        navigating = nav != null,
                         mediaPanel = {
                             val mediaState by mediaViewModel.state.collectAsState()
                             MediaWidget(state = mediaState, actions = mediaActions)
+                        },
+                        navigationPanel = {
+                            if (nav != null) {
+                                NavigationCard(
+                                    navigation = nav,
+                                    speedKmh = speedKmh,
+                                    speedUnit = homeState.speedUnit,
+                                    showSpeed = homeState.showSpeed && permissions.location,
+                                    onClick = { openApp(nav.packageName) },
+                                )
+                            }
+                        },
+                        mediaBar = {
+                            val mediaState by mediaViewModel.state.collectAsState()
+                            MediaBar(state = mediaState, actions = mediaActions)
+                        },
+                        headerExtras = {
+                            // En navegación la velocidad va grande en la tarjeta
+                            if (homeState.showSpeed && permissions.location && nav == null) {
+                                SpeedReadout(speedKmh, homeState.speedUnit, large = false)
+                                Spacer(Modifier.width(16.dp))
+                            }
+                            BluetoothIndicator(bluetooth, onClick = { onBluetoothClick(bluetooth.permissionGranted) })
                         },
                     )
                     OverlayVisibility(overlay == Overlay.Drawer) {
@@ -116,6 +181,8 @@ class MainActivity : ComponentActivity() {
                     }
                     OverlayVisibility(overlay == Overlay.Settings) {
                         val settingsState by settingsViewModel.state.collectAsState()
+                        val permissionsState by drivingViewModel.permissions.collectAsState()
+                        val bluetoothState by drivingViewModel.bluetooth.collectAsState()
                         val entries by themeViewModel.entries.collectAsState()
                         val selectedId by themeViewModel.selectedId.collectAsState()
                         SettingsScreen(
@@ -128,6 +195,8 @@ class MainActivity : ComponentActivity() {
                                 isNight = theme.isNight,
                                 hasDayVariant = theme.hasDayVariant,
                             ),
+                            permissions = permissionsState,
+                            bluetooth = bluetoothState,
                             actions = settingsActions,
                         )
                     }
@@ -152,11 +221,50 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         mediaViewModel.onVisible()
         themeViewModel.onVisible()
+        drivingViewModel.onVisible()
     }
 
     override fun onStop() {
         super.onStop()
         mediaViewModel.onHidden()
+        drivingViewModel.onHidden()
+    }
+
+    private fun requestRuntimePermissions() {
+        val wanted = buildList {
+            add(Manifest.permission.ACCESS_FINE_LOCATION)
+            add(Manifest.permission.ACCESS_COARSE_LOCATION)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(Manifest.permission.BLUETOOTH_CONNECT)
+        }
+        val missing = wanted.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+        when {
+            missing.isEmpty() -> drivingViewModel.onVisible()
+            // Si el usuario lo denegó "para siempre", el diálogo ya no aparece: abrir los ajustes de la app
+            permissionsAskedBefore && missing.none { shouldShowRequestPermissionRationale(it) } -> openAppDetails()
+            else -> permissionLauncher.launch(missing.toTypedArray())
+        }
+        permissionsAskedBefore = true
+    }
+
+    private fun openAppDetails() = startSafely(
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:$packageName".toUri())
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        getString(R.string.app_name),
+    )
+
+    /** Indicador de Bluetooth: sin permiso lo pide; con permiso abre la app elegida o los ajustes de BT. */
+    private fun onBluetoothClick(permissionGranted: Boolean) {
+        if (!permissionGranted) return requestRuntimePermissions()
+        lifecycleScope.launch {
+            val app = container.launcherSettingsRepository.settings.first().bluetoothApp
+            val intent = app.takeIf { it.isNotEmpty() }?.let { container.appRepository.launchIntent(it) }
+                ?: Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startSafely(intent, "Bluetooth")
+        }
+    }
+
+    private fun openApp(packageName: String) {
+        container.appRepository.launchIntent(packageName)?.let { startSafely(it, packageName) }
     }
 
     /** Pulsar Home estando ya en el launcher (p. ej. con el cajón abierto) vuelve a la pantalla principal. */
@@ -180,8 +288,13 @@ class MainActivity : ComponentActivity() {
         }
 
         override fun onAddToHome(app: AppEntry) {
-            drawerViewModel.addToHome(app)
+            drawerViewModel.addTo(ShortcutList.Home, app)
             toast(getString(R.string.added_to_home, app.label))
+        }
+
+        override fun onAddToNavigation(app: AppEntry) {
+            drawerViewModel.addTo(ShortcutList.Navigation, app)
+            toast(getString(R.string.added_to_navigation, app.label))
         }
 
         override fun onAppInfo(app: AppEntry) = startSafely(
@@ -202,12 +315,19 @@ class MainActivity : ComponentActivity() {
         override fun onClose() = closeOverlay()
         override fun onShowClockChange(show: Boolean) = settingsViewModel.setShowClock(show)
         override fun onColumnsChange(columns: Int) = settingsViewModel.setColumns(columns)
+        override fun onShowSpeedChange(show: Boolean) = settingsViewModel.setShowSpeed(show)
+        override fun onSpeedUnitChange(unit: SpeedUnit) = settingsViewModel.setSpeedUnit(unit)
         override fun onDayNightModeChange(mode: DayNightMode) = settingsViewModel.setDayNightMode(mode)
         override fun onDayStartChange(hour: Int) = settingsViewModel.setDayStartHour(hour)
         override fun onNightStartChange(hour: Int) = settingsViewModel.setNightStartHour(hour)
-        override fun onMoveShortcut(id: String, delta: Int) = settingsViewModel.moveShortcut(id, delta)
-        override fun onRemoveShortcut(id: String) = settingsViewModel.removeShortcut(id)
-        override fun onResetShortcuts() = settingsViewModel.resetShortcuts()
+        override fun onMoveShortcut(list: ShortcutList, id: String, delta: Int) =
+            settingsViewModel.moveShortcut(list, id, delta)
+        override fun onRemoveShortcut(list: ShortcutList, id: String) = settingsViewModel.removeShortcut(list, id)
+        override fun onResetShortcuts(list: ShortcutList) = settingsViewModel.resetShortcuts(list)
+        override fun onRequestPermissions() = requestRuntimePermissions()
+        override fun onRequestNotificationAccess() = requestNotificationAccess()
+        override fun onResumeMusicChange(resume: Boolean) = settingsViewModel.setResumeMusicOnConnect(resume)
+        override fun onBluetoothAppChange(packageName: String) = settingsViewModel.setBluetoothApp(packageName)
         override fun onSelectTheme(id: String) = themeViewModel.select(id)
         override fun onReloadThemes() = themeViewModel.refresh()
     }
@@ -217,9 +337,7 @@ class MainActivity : ComponentActivity() {
         override fun onNext() = mediaViewModel.next()
         override fun onPrevious() = mediaViewModel.previous()
 
-        override fun onOpenPlayer(packageName: String) {
-            container.appRepository.launchIntent(packageName)?.let { startSafely(it, packageName) }
-        }
+        override fun onOpenPlayer(packageName: String) = openApp(packageName)
 
         override fun onRequestPermission() = requestNotificationAccess()
     }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.iappsan.carlauncher.AppContainer
+import com.iappsan.carlauncher.data.DayNightRepository
 import com.iappsan.carlauncher.data.LauncherSettingsRepository
 import com.iappsan.carlauncher.theme.LoadedTheme
 import com.iappsan.carlauncher.theme.ThemeEntry
@@ -19,7 +20,8 @@ import kotlinx.coroutines.launch
 
 class ThemeViewModel(
     private val themeRepository: ThemeRepository,
-    private val settingsRepository: LauncherSettingsRepository,
+    settingsRepository: LauncherSettingsRepository,
+    private val dayNightRepository: DayNightRepository,
 ) : ViewModel() {
 
     /**
@@ -40,7 +42,7 @@ class ThemeViewModel(
     val userThemesPath: String? get() = themeRepository.userThemesDir?.absolutePath
 
     /** Home visible: recalcular si toca día o noche. */
-    fun onVisible() = settingsRepository.reevaluateDayNight()
+    fun onVisible() = dayNightRepository.reevaluate()
 
     /** Vuelve a buscar temas en disco y recarga el actual (por si se editó). */
     fun refresh() {
@@ -54,7 +56,9 @@ class ThemeViewModel(
 
     companion object {
         fun factory(container: AppContainer) = viewModelFactory {
-            initializer { ThemeViewModel(container.themeRepository, container.launcherSettingsRepository) }
+            initializer {
+                ThemeViewModel(container.themeRepository, container.launcherSettingsRepository, container.dayNightRepository)
+            }
         }
     }
 }
