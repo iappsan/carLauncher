@@ -77,6 +77,7 @@ internal fun DisplaySettings(settings: LauncherSettings, actions: SettingsAction
 internal fun DayNightSettings(
     settings: LauncherSettings,
     sunTimes: SunTimes?,
+    systemNight: Boolean,
     isNight: Boolean,
     themeHasDayVariant: Boolean,
     actions: SettingsActions,
@@ -95,6 +96,7 @@ internal fun DayNightSettings(
                 options = listOf(
                     DayNightMode.Sun to stringResource(R.string.settings_mode_sun),
                     DayNightMode.Auto to stringResource(R.string.settings_mode_auto),
+                    DayNightMode.CarLights to stringResource(R.string.settings_mode_lights),
                     DayNightMode.AlwaysNight to stringResource(R.string.settings_mode_night),
                     DayNightMode.AlwaysDay to stringResource(R.string.settings_mode_day),
                 ),
@@ -118,6 +120,18 @@ internal fun DayNightSettings(
                     )
                 }
                 Text(sunText, style = MaterialTheme.typography.bodyLarge)
+            }
+            // Indicador en vivo para comprobar si el estéreo activa el modo noche con las luces.
+            Text(
+                stringResource(if (systemNight) R.string.settings_system_night_on else R.string.settings_system_night_off),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            if (mode == DayNightMode.CarLights) {
+                Text(
+                    stringResource(R.string.settings_lights_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             if (!themeHasDayVariant) {
                 Text(

@@ -53,7 +53,7 @@
     <string name="settings_mode_auto">Por horario</string>
     <string name="settings_mode_night">Siempre noche</string>
     <string name="settings_mode_day">Siempre día</string>
-    <string name="settings_day_night_desc">Por sol o por horario, se decide al arrancar y cada vez que vuelves a Home (no a mitad de uso).</string>
+    <string name="settings_day_night_desc">Por sol o por horario, se decide al arrancar y cada vez que vuelves a Home (no a mitad de uso). Por luces cambia al instante.</string>
     <string name="settings_now_night">Ahora: modo noche</string>
     <string name="settings_now_day">Ahora: modo día</string>
     <string name="settings_no_day_variant">El tema actual no define colores de día: se ve igual a cualquier hora.</string>
@@ -82,6 +82,10 @@
     <string name="settings_speed_desc">Velocidad por GPS junto al reloj (y grande al navegar)</string>
     <string name="settings_speed_unit">Unidad de velocidad</string>
     <string name="settings_mode_sun">Por sol</string>
+    <string name="settings_mode_lights">Por luces</string>
+    <string name="settings_system_night_on">Modo noche del sistema: sí</string>
+    <string name="settings_system_night_off">Modo noche del sistema: no</string>
+    <string name="settings_lights_hint">«Por luces» sigue el modo noche que activa el estéreo al encender las luces del carro, al instante. Prende y apaga las luces y mira si cambia la línea de arriba; si no cambia, tu estéreo no lo anuncia y conviene usar «Por sol».</string>
     <string name="settings_sun_times">Hoy: amanecer %1$s · atardecer %2$s</string>
     <string name="settings_sun_no_location">Aún sin ubicación: se usa el horario hasta que el GPS dé una posición.</string>
     <string name="settings_sun_polar_day">Hoy el sol no se pone.</string>

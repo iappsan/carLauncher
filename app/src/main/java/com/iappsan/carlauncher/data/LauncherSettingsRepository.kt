@@ -20,7 +20,7 @@ import java.time.LocalTime
  * Cómo se decide entre tema de día y de noche.
  * (`Auto` = por horario; se mantiene ese nombre porque es el que ya está guardado en DataStore.)
  */
-enum class DayNightMode { Sun, Auto, AlwaysNight, AlwaysDay }
+enum class DayNightMode { Sun, Auto, CarLights, AlwaysNight, AlwaysDay }
 
 /** Cómo se colocan los accesos en Home: rejilla a la derecha o dock inferior (estilo Mac). */
 enum class HomeLayout { Grid, Dock }
@@ -55,7 +55,8 @@ data class LauncherSettings(
     fun isNightBySchedule(time: LocalTime): Boolean = when (dayNightMode) {
         DayNightMode.AlwaysNight -> true
         DayNightMode.AlwaysDay -> false
-        DayNightMode.Auto, DayNightMode.Sun -> {
+        // CarLights usa el horario solo como respaldo (DayNightRepository decide con el modo noche del sistema).
+        DayNightMode.Auto, DayNightMode.Sun, DayNightMode.CarLights -> {
             val hour = time.hour
             when {
                 dayStartHour == nightStartHour -> false

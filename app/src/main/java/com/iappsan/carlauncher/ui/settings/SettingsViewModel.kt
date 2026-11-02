@@ -15,6 +15,7 @@ import com.iappsan.carlauncher.data.Shortcut
 import com.iappsan.carlauncher.data.ShortcutList
 import com.iappsan.carlauncher.data.ShortcutRepository
 import com.iappsan.carlauncher.data.SpeedUnit
+import com.iappsan.carlauncher.data.SystemNightMonitor
 import com.iappsan.carlauncher.data.location.LocationRepository
 import com.iappsan.carlauncher.data.location.SunCalculator
 import com.iappsan.carlauncher.data.location.SunTimes
@@ -37,6 +38,8 @@ data class SettingsUiState(
     val sunTimes: SunTimes? = null,
     /** Apps que parecen de Bluetooth/teléfono, candidatas a abrirse desde el indicador. */
     val bluetoothApps: List<AppEntry> = emptyList(),
+    /** Modo noche del sistema (lo que activa el estéreo con las luces, si lo hace). */
+    val systemNight: Boolean = false,
 )
 
 /** Ajustes del launcher y gestión de accesos. (El tema lo lleva ThemeViewModel.) */
@@ -45,6 +48,7 @@ class SettingsViewModel(
     private val shortcutRepository: ShortcutRepository,
     locationRepository: LocationRepository,
     appRepository: AppRepository,
+    private val systemNightMonitor: SystemNightMonitor,
 ) : ViewModel() {
 
     private val bluetoothApps = appRepository.changes.map {
@@ -69,6 +73,8 @@ class SettingsViewModel(
                 bluetoothApps = btApps,
             )
         }
+            // combine admite como mucho 5 flows con tipos; el sexto se añade encadenando otro combine.
+            .combine(systemNightMonitor.isNight) { state, systemNight -> state.copy(systemNight = systemNight) }
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
@@ -110,6 +116,7 @@ class SettingsViewModel(
                     container.shortcutRepository,
                     container.locationRepository,
                     container.appRepository,
+                    container.systemNightMonitor,
                 )
             }
         }

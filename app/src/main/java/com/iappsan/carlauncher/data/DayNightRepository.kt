@@ -14,17 +14,25 @@ import java.time.ZonedDateTime
 class DayNightRepository(
     settingsRepository: LauncherSettingsRepository,
     locationRepository: LocationRepository,
+    systemNightMonitor: SystemNightMonitor,
 ) {
     // Señal para recalcular (la hora avanza aunque nada más cambie).
     private val tick = MutableStateFlow(0)
 
     /**
-     * `true` si ahora toca modo noche. Se evalúa al arrancar y cada vez que se llama a [reevaluate]
-     * (al volver a Home), no en tiempo real: así el tema no cambia de golpe mientras se usa.
+     * `true` si ahora toca modo noche. Por sol/horario se evalúa al arrancar y cada vez que se llama
+     * a [reevaluate] (al volver a Home), no en tiempo real: así el tema no cambia de golpe mientras se usa.
+     * Por luces del carro, en cambio, sigue al modo noche del sistema al instante.
      */
     val isNight: Flow<Boolean> =
-        combine(settingsRepository.settings, locationRepository.lastKnownPoint, tick) { settings, point, _ ->
-            isNight(settings, point, ZonedDateTime.now())
+        combine(
+            settingsRepository.settings,
+            locationRepository.lastKnownPoint,
+            systemNightMonitor.isNight,
+            tick,
+        ) { settings, point, systemNight, _ ->
+            if (settings.dayNightMode == DayNightMode.CarLights) systemNight
+            else isNight(settings, point, ZonedDateTime.now())
         }.distinctUntilChanged()
 
     fun reevaluate() = tick.update { it + 1 }

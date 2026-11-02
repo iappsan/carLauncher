@@ -121,6 +121,7 @@ fun SettingsScreen(
                         Section.DayNight -> DayNightSettings(
                             settings = state.settings,
                             sunTimes = state.sunTimes,
+                            systemNight = state.systemNight,
                             isNight = themeState.isNight,
                             themeHasDayVariant = themeState.hasDayVariant,
                             actions = actions,
