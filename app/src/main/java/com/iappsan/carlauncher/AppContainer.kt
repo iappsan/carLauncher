@@ -8,7 +8,7 @@ import com.iappsan.carlauncher.data.ShortcutRepository
 /** Inyección de dependencias manual: un único lugar donde se crean los singletons de la app. */
 class AppContainer(context: Context) {
     val appRepository = AppRepository(context)
-    val shortcutRepository = ShortcutRepository()
+    val shortcutRepository = ShortcutRepository(context)
 }
 
 class CarLauncherApp : Application() {

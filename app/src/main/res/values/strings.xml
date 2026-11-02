@@ -2,5 +2,12 @@
     <string name="app_name">CarLauncher</string>
     <string name="app_not_installed">%1$s no está instalada</string>
     <string name="cannot_open">No se pudo abrir %1$s</string>
-    <string name="drawer_coming_soon">El cajón de apps llega en la fase 2</string>
+    <string name="drawer_search_hint">Buscar apps</string>
+    <string name="drawer_close">Cerrar</string>
+    <string name="drawer_empty">Sin resultados</string>
+    <string name="add_to_home">Agregar a Home</string>
+    <string name="already_on_home">Ya está en Home</string>
+    <string name="added_to_home">%1$s agregada a Home</string>
+    <string name="remove_from_home">Quitar de Home</string>
+    <string name="app_info">Información de la app</string>
 </resources>

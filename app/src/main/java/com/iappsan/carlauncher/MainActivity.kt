@@ -7,13 +7,27 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.core.net.toUri
+import com.iappsan.carlauncher.data.AppEntry
 import com.iappsan.carlauncher.data.Shortcut
 import com.iappsan.carlauncher.data.ShortcutTarget
+import com.iappsan.carlauncher.ui.drawer.DrawerActions
+import com.iappsan.carlauncher.ui.drawer.DrawerScreen
+import com.iappsan.carlauncher.ui.drawer.DrawerViewModel
 import com.iappsan.carlauncher.ui.home.HomeScreen
 import com.iappsan.carlauncher.ui.home.HomeViewModel
 import com.iappsan.carlauncher.ui.theme.CarLauncherTheme
@@ -24,6 +38,10 @@ class MainActivity : ComponentActivity() {
 
     // `by viewModels { ... }` = delegado que crea/recupera el ViewModel usando nuestra factory.
     private val homeViewModel: HomeViewModel by viewModels { HomeViewModel.factory(container) }
+    private val drawerViewModel: DrawerViewModel by viewModels { DrawerViewModel.factory(container) }
+
+    /** Navegación mínima sin librería: el cajón se pinta encima de Home cuando es `true`. */
+    private var showDrawer by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,16 +52,66 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             // collectAsState convierte el StateFlow en estado de Compose: al cambiar, se repinta.
-            val state by homeViewModel.state.collectAsState()
+            val homeState by homeViewModel.state.collectAsState()
             CarLauncherTheme {
-                HomeScreen(state = state, onShortcutClick = ::onShortcutClick)
+                Box {
+                    HomeScreen(
+                        state = homeState,
+                        onShortcutClick = ::onShortcutClick,
+                        onShortcutRemove = homeViewModel::removeShortcut,
+                    )
+                    AnimatedVisibility(
+                        visible = showDrawer,
+                        enter = fadeIn() + slideInVertically { it / 10 },
+                        exit = fadeOut() + slideOutVertically { it / 10 },
+                    ) {
+                        // Registrado después que el callback no-op, así que tiene prioridad mientras el cajón está abierto.
+                        BackHandler { closeDrawer() }
+                        val drawerState by drawerViewModel.state.collectAsState()
+                        DrawerScreen(
+                            state = drawerState,
+                            query = drawerViewModel.query,
+                            iconLoader = container.appRepository,
+                            actions = drawerActions,
+                        )
+                    }
+                }
             }
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        homeViewModel.refresh()
+    /** Pulsar Home estando ya en el launcher (p. ej. con el cajón abierto) vuelve a la pantalla principal. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        closeDrawer()
+    }
+
+    private fun closeDrawer() {
+        showDrawer = false
+        drawerViewModel.onQueryChange("")
+    }
+
+    private val drawerActions = object : DrawerActions {
+        override fun onQueryChange(query: String) = drawerViewModel.onQueryChange(query)
+
+        override fun onLaunch(app: AppEntry) {
+            if (!container.appRepository.launch(app.component)) {
+                toast(getString(R.string.cannot_open, app.label))
+            }
+        }
+
+        override fun onAddToHome(app: AppEntry) {
+            drawerViewModel.addToHome(app)
+            toast(getString(R.string.added_to_home, app.label))
+        }
+
+        override fun onAppInfo(app: AppEntry) = startSafely(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${app.packageName}".toUri())
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            app.label,
+        )
+
+        override fun onClose() = closeDrawer()
     }
 
     private fun onShortcutClick(shortcut: Shortcut) {
@@ -60,7 +128,7 @@ class MainActivity : ComponentActivity() {
                 Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 shortcut.label,
             )
-            ShortcutTarget.AppDrawer -> toast(getString(R.string.drawer_coming_soon))
+            ShortcutTarget.AppDrawer -> showDrawer = true
         }
     }
 

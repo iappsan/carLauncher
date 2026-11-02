@@ -11,11 +11,12 @@ import com.iappsan.carlauncher.data.Shortcut
 import com.iappsan.carlauncher.data.ShortcutRepository
 import com.iappsan.carlauncher.data.ShortcutTarget
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** Un botón de Home ya resuelto para pintar. */
 data class ShortcutItem(
@@ -35,28 +36,37 @@ class HomeViewModel(
     private val appRepository: AppRepository,
 ) : ViewModel() {
 
-    // Patrón habitual: el MutableStateFlow es privado y se expone como StateFlow de solo lectura.
-    private val _state = MutableStateFlow(HomeUiState(columns = shortcutRepository.columns))
-    val state: StateFlow<HomeUiState> = _state.asStateFlow()
+    /**
+     * Se recalcula solo cuando cambian los accesos guardados o las apps instaladas.
+     * `combine` emite cada vez que cualquiera de los dos flows emite; `stateIn` lo convierte
+     * en un StateFlow que vive mientras viva el ViewModel (viewModelScope).
+     */
+    val state: StateFlow<HomeUiState> =
+        combine(shortcutRepository.shortcuts, appRepository.changes) { shortcuts, _ ->
+            HomeUiState(items = resolve(shortcuts), columns = shortcutRepository.columns)
+        }
+            .flowOn(Dispatchers.Default) // el trabajo de arriba (iconos, lista de apps) va en segundo plano
+            .stateIn(viewModelScope, SharingStarted.Eagerly, HomeUiState(columns = shortcutRepository.columns))
 
-    /** Recalcula los accesos (p. ej. al volver a Home, por si se instaló/desinstaló una app). */
-    fun refresh() {
-        // viewModelScope: coroutines que se cancelan solas cuando el ViewModel se destruye.
-        viewModelScope.launch {
-            val items = withContext(Dispatchers.Default) {
-                shortcutRepository.shortcuts().map { shortcut ->
-                    when (val target = shortcut.target) {
-                        is ShortcutTarget.App -> ShortcutItem(
-                            shortcut = shortcut,
-                            icon = appRepository.loadIcon(target.packageName),
-                            available = appRepository.isInstalled(target.packageName),
-                        )
-                        ShortcutTarget.SystemSettings,
-                        ShortcutTarget.AppDrawer -> ShortcutItem(shortcut, icon = null, available = true)
-                    }
+    fun removeShortcut(shortcut: Shortcut) {
+        viewModelScope.launch { shortcutRepository.remove(shortcut.id) }
+    }
+
+    private fun resolve(shortcuts: List<Shortcut>): List<ShortcutItem> {
+        val installed = appRepository.installedApps().mapTo(HashSet()) { it.packageName }
+        return shortcuts.map { shortcut ->
+            when (val target = shortcut.target) {
+                is ShortcutTarget.App -> {
+                    val available = target.packageName in installed
+                    ShortcutItem(
+                        shortcut = shortcut,
+                        icon = if (available) appRepository.loadIcon(target.packageName) else null,
+                        available = available,
+                    )
                 }
+                ShortcutTarget.SystemSettings,
+                ShortcutTarget.AppDrawer -> ShortcutItem(shortcut, icon = null, available = true)
             }
-            _state.value = _state.value.copy(items = items)
         }
     }
 

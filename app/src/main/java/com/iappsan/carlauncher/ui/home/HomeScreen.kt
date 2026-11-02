@@ -2,6 +2,7 @@ package com.iappsan.carlauncher.ui.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,13 +19,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
+import com.iappsan.carlauncher.R
 import com.iappsan.carlauncher.data.Shortcut
 import com.iappsan.carlauncher.data.ShortcutTarget
 import com.iappsan.carlauncher.ui.theme.CarLauncherTheme
@@ -43,6 +52,7 @@ private val TileSpacing = 16.dp
 fun HomeScreen(
     state: HomeUiState,
     onShortcutClick: (Shortcut) -> Unit,
+    onShortcutRemove: (Shortcut) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -57,6 +67,7 @@ fun HomeScreen(
             items = state.items,
             columns = state.columns,
             onShortcutClick = onShortcutClick,
+            onShortcutRemove = onShortcutRemove,
         )
     }
 }
@@ -70,6 +81,7 @@ private fun ShortcutGrid(
     items: List<ShortcutItem>,
     columns: Int,
     onShortcutClick: (Shortcut) -> Unit,
+    onShortcutRemove: (Shortcut) -> Unit,
 ) {
     if (items.isEmpty()) return
     val rows = items.chunked(columns)
@@ -94,6 +106,7 @@ private fun ShortcutGrid(
                         ShortcutTile(
                             item = item,
                             onClick = { onShortcutClick(item.shortcut) },
+                            onRemove = { onShortcutRemove(item.shortcut) },
                             // weight(1f): cada celda ocupa la misma fracción del ancho de la fila
                             modifier = Modifier.weight(1f).fillMaxSize(),
                         )
@@ -110,32 +123,55 @@ private fun ShortcutGrid(
 private fun ShortcutTile(
     item: ShortcutItem,
     onClick: () -> Unit,
+    onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val highlighted = item.shortcut.target == ShortcutTarget.AppDrawer
-    Surface(
-        onClick = onClick,
-        modifier = modifier.alpha(if (item.available) 1f else 0.45f),
-        shape = RoundedCornerShape(24.dp),
-        color = if (highlighted) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surface,
-        contentColor = if (highlighted) MaterialTheme.colorScheme.onPrimaryContainer
-        else MaterialTheme.colorScheme.onSurface,
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+    var menuOpen by remember { mutableStateOf(false) }
+
+    Box(modifier) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(if (item.available) 1f else 0.45f),
+            shape = RoundedCornerShape(24.dp),
+            color = if (highlighted) MaterialTheme.colorScheme.primaryContainer
+            else MaterialTheme.colorScheme.surface,
+            contentColor = if (highlighted) MaterialTheme.colorScheme.onPrimaryContainer
+            else MaterialTheme.colorScheme.onSurface,
         ) {
-            TileIcon(item)
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = item.shortcut.label,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .combinedClickable(
+                        onClick = onClick,
+                        // El botón "Apps" no se puede quitar: sin pulsación larga.
+                        onLongClick = if (highlighted) null else ({ menuOpen = true }),
+                    )
+                    .padding(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                TileIcon(item)
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = item.shortcut.label,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.remove_from_home)) },
+                onClick = {
+                    menuOpen = false
+                    onRemove()
+                },
             )
         }
     }
@@ -176,6 +212,6 @@ private fun HomeScreenPreview() {
         Shortcut("apps", "Apps", ShortcutTarget.AppDrawer),
     ).map { ShortcutItem(it, icon = null, available = it.id != "waze") }
     CarLauncherTheme {
-        HomeScreen(state = HomeUiState(items = items), onShortcutClick = {})
+        HomeScreen(state = HomeUiState(items = items), onShortcutClick = {}, onShortcutRemove = {})
     }
 }

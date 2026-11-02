@@ -16,7 +16,10 @@ El autor es desarrollador Java/Spring Boot con poca experiencia en Kotlin: al es
 ## Convenciones
 - MVVM ligero: `ViewModel` + `StateFlow`; coroutines para trabajo en segundo plano (apps, iconos); caché de iconos (`LruCache`).
 - Inyección manual: `AppContainer` creado en `CarLauncherApp` (Application). Sin Hilt/Dagger.
-- Configuración del usuario con DataStore (a partir de la fase 2).
+- Configuración del usuario con DataStore Preferences (`settings`).
+- Navegación sin librería: el cajón es un overlay sobre Home (`showDrawer` en `MainActivity`); "atrás" o Home lo cierran.
+- Probar en el emulador `Car_HeadUnit_1024x600` (AVD 1024×600, 160dpi, horizontal).
+- Si Gradle elige el JRE de VS Code (sin `jlink`), compilar con `-Dorg.gradle.java.installations.auto-detect=false -Dorg.gradle.java.installations.paths="C:\Program Files\Java\jdk-25.0.5.0.2"`.
 - No cambiar versiones de AGP/Kotlin/Compose salvo necesidad. AGP 9 trae soporte Kotlin integrado (no hay plugin `kotlin-android`).
 - Paquetes:
   - `data` — modelos, apps instaladas, iconos, configuración.
@@ -31,7 +34,7 @@ El autor es desarrollador Java/Spring Boot con poca experiencia en Kotlin: al es
 
 ## Plan por fases
 - **Fase 1 – Base** ✅: manifest como launcher (HOME/DEFAULT + LAUNCHER durante desarrollo, singleTask, landscape, `<queries>`), Home oscuro con rejilla de accesos grandes (Maps, Waze, Spotify, YouTube Music, Ajustes) + botón "Apps", Toast si la app no está instalada, "atrás" bloqueado.
-- **Fase 2 – Cajón de apps**: todas las apps (`LauncherApps`/`PackageManager`), orden alfabético, búsqueda, iconos asíncronos con caché, mantener presionado → "Agregar a Home" (persistido en DataStore).
+- **Fase 2 – Cajón de apps** ✅: `LauncherApps` (con callback de instalación/desinstalación → `AppRepository.changes`), orden alfabético con `Collator`, búsqueda sin acentos, iconos asíncronos con caché (`IconLoader`), pulsación larga → "Agregar a Home" / "Información de la app"; en Home, pulsación larga → "Quitar de Home" (el botón "Apps" no se puede quitar). Accesos persistidos en DataStore (`ShortcutRepository`).
 - **Fase 3 – Widget de música**: `NotificationListenerService` + `MediaSessionManager`, pantalla para pedir acceso a notificaciones, controles y carátula.
 - **Fase 4 – Motor de temas**: esquema `theme.json` + data class (kotlinx.serialization), carga desde almacenamiento externo de la app, aplicación a `ColorScheme` y layout, selector en ajustes, documentación en `docs/THEMES.md`.
 - **Fase 5 – Pulido**: día/noche, reloj grande, ajustes del launcher (columnas, accesos, tema), revisión de rendimiento.

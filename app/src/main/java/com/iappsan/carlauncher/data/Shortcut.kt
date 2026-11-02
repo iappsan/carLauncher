@@ -22,4 +22,13 @@ data class Shortcut(
     val id: String,
     val label: String,
     val target: ShortcutTarget,
-)
+) {
+    companion object {
+        // `companion object` ≈ miembros static de Java.
+        fun app(packageName: String, label: String) =
+            Shortcut("app:$packageName", label, ShortcutTarget.App(packageName))
+
+        val Settings = Shortcut("settings", "Ajustes", ShortcutTarget.SystemSettings)
+        val Drawer = Shortcut("apps", "Apps", ShortcutTarget.AppDrawer)
+    }
+}
