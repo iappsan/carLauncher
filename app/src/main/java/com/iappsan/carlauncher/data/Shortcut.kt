@@ -23,6 +23,14 @@ data class Shortcut(
     val label: String,
     val target: ShortcutTarget,
 ) {
+    /** Clave para buscar un icono personalizado en el tema (`icons` de theme.json). */
+    val themeIconKey: String
+        get() = when (target) {
+            is ShortcutTarget.App -> target.packageName
+            ShortcutTarget.SystemSettings -> "settings"
+            ShortcutTarget.AppDrawer -> "apps"
+        }
+
     companion object {
         // `companion object` ≈ miembros static de Java.
         fun app(packageName: String, label: String) =

@@ -22,6 +22,17 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell cmd package set-home-activity com.iappsan.carlauncher/.MainActivity
 ```
 
+## Temas
+Ver [THEMES.md](THEMES.md). Copiar un tema al emulador:
+```bash
+adb shell mkdir -p /sdcard/Android/data/com.iappsan.carlauncher/files/themes
+adb push docs/examples/atardecer /sdcard/Android/data/com.iappsan.carlauncher/files/themes/
+adb shell chmod -R a+rwX /sdcard/Android/data/com.iappsan.carlauncher/files/themes
+```
+
+Ojo: reinstalar la APK cuando cambian sus componentes (p. ej. un servicio nuevo) puede hacer que
+Android olvide el launcher preferido; vuelve a fijarlo con `set-home-activity`.
+
 ## Acceso a notificaciones (widget de música)
 Normalmente se concede desde el botón "Dar permiso" del widget. Si el head unit no tiene esa
 pantalla de ajustes, se puede conceder por adb:

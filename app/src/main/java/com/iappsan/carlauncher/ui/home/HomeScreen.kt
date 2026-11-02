@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,13 +45,11 @@ import androidx.compose.ui.unit.max
 import com.iappsan.carlauncher.R
 import com.iappsan.carlauncher.data.Shortcut
 import com.iappsan.carlauncher.data.ShortcutTarget
+import com.iappsan.carlauncher.ui.icons.LauncherIcons
 import com.iappsan.carlauncher.ui.theme.CarLauncherTheme
+import com.iappsan.carlauncher.ui.theme.LauncherTheme
 
 private val MinTileHeight = 80.dp
-private val TileSpacing = 16.dp
-
-/** Fracción del ancho para el widget de música (el resto, para los accesos). */
-private const val MediaPanelWeight = 0.38f
 
 @Composable
 fun HomeScreen(
@@ -62,22 +61,26 @@ fun HomeScreen(
     // `@Composable () -> Unit` = una función composable pasada como parámetro.
     mediaPanel: @Composable () -> Unit = {},
 ) {
+    val layout = LauncherTheme.layout
+    // Sin fondo propio: lo pinta ThemeBackground detrás (color o imagen del tema).
     Row(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
             // Deja espacio para barras del sistema / recortes de pantalla
             .safeDrawingPadding()
-            .padding(TileSpacing),
-        horizontalArrangement = Arrangement.spacedBy(TileSpacing),
+            .padding(layout.spacing),
+        horizontalArrangement = Arrangement.spacedBy(layout.spacing),
     ) {
-        Box(Modifier.weight(MediaPanelWeight).fillMaxHeight()) { mediaPanel() }
+        // Un tema puede ocultar el widget con mediaPanelWeight = 0
+        if (layout.mediaPanelWeight > 0f) {
+            Box(Modifier.weight(layout.mediaPanelWeight).fillMaxHeight()) { mediaPanel() }
+        }
         ShortcutGrid(
             items = state.items,
-            columns = state.columns,
+            columns = layout.columns,
             onShortcutClick = onShortcutClick,
             onShortcutRemove = onShortcutRemove,
-            modifier = Modifier.weight(1f - MediaPanelWeight),
+            modifier = Modifier.weight(1f - layout.mediaPanelWeight),
         )
     }
 }
@@ -94,24 +97,25 @@ private fun ShortcutGrid(
     onShortcutRemove: (Shortcut) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val spacing = LauncherTheme.layout.spacing
     val rows = items.chunked(columns)
 
     // BoxWithConstraints expone maxWidth/maxHeight del espacio disponible (en dp).
     BoxWithConstraints(modifier.fillMaxSize()) {
         if (rows.isEmpty()) return@BoxWithConstraints
-        val fittedHeight: Dp = (maxHeight - TileSpacing * (rows.size - 1)) / rows.size
+        val fittedHeight: Dp = (maxHeight - spacing * (rows.size - 1)) / rows.size
         val tileHeight = max(MinTileHeight, fittedHeight)
 
         Column(
             modifier = Modifier.verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(TileSpacing),
+            verticalArrangement = Arrangement.spacedBy(spacing),
         ) {
             rows.forEach { rowItems ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(tileHeight),
-                    horizontalArrangement = Arrangement.spacedBy(TileSpacing),
+                    horizontalArrangement = Arrangement.spacedBy(spacing),
                 ) {
                     rowItems.forEach { item ->
                         ShortcutTile(
@@ -137,6 +141,7 @@ private fun ShortcutTile(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val layout = LauncherTheme.layout
     val highlighted = item.shortcut.target == ShortcutTarget.AppDrawer
     var menuOpen by remember { mutableStateOf(false) }
 
@@ -145,7 +150,7 @@ private fun ShortcutTile(
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(if (item.available) 1f else 0.45f),
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(layout.cornerRadius),
             color = if (highlighted) MaterialTheme.colorScheme.primaryContainer
             else MaterialTheme.colorScheme.surface,
             contentColor = if (highlighted) MaterialTheme.colorScheme.onPrimaryContainer
@@ -163,16 +168,18 @@ private fun ShortcutTile(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                TileIcon(item)
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = item.shortcut.label,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                TileIcon(item, layout.iconSize)
+                if (layout.showLabels) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = item.shortcut.label,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
 
@@ -189,15 +196,16 @@ private fun ShortcutTile(
 }
 
 @Composable
-private fun TileIcon(item: ShortcutItem) {
-    val icon = item.icon
-    if (icon != null) {
-        Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(56.dp))
-    } else {
-        // Sin icono (ajustes, cajón o app no instalada): círculo con la inicial
-        Box(
+private fun TileIcon(item: ShortcutItem, size: Dp) {
+    // Prioridad: icono del tema > icono de la app > vector propio ("Apps") > inicial
+    val icon = LauncherTheme.icons[item.shortcut.themeIconKey] ?: item.icon
+    when {
+        icon != null -> Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(size))
+        item.shortcut.target == ShortcutTarget.AppDrawer ->
+            Icon(LauncherIcons.Apps, contentDescription = null, modifier = Modifier.size(size))
+        else -> Box(
             modifier = Modifier
-                .size(56.dp)
+                .size(size)
                 .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
@@ -215,13 +223,13 @@ private fun TileIcon(item: ShortcutItem) {
 @Composable
 private fun HomeScreenPreview() {
     val items = listOf(
-        Shortcut("maps", "Maps", ShortcutTarget.App("x")),
-        Shortcut("waze", "Waze", ShortcutTarget.App("y")),
-        Shortcut("spotify", "Spotify", ShortcutTarget.App("z")),
-        Shortcut("ytmusic", "YouTube Music", ShortcutTarget.App("w")),
-        Shortcut("settings", "Ajustes", ShortcutTarget.SystemSettings),
-        Shortcut("apps", "Apps", ShortcutTarget.AppDrawer),
-    ).map { ShortcutItem(it, icon = null, available = it.id != "waze") }
+        Shortcut.app("x", "Maps"),
+        Shortcut.app("y", "Waze"),
+        Shortcut.app("z", "Spotify"),
+        Shortcut.app("w", "YouTube Music"),
+        Shortcut.Settings,
+        Shortcut.Drawer,
+    ).map { ShortcutItem(it, icon = null, available = it.label != "Waze") }
     CarLauncherTheme {
         HomeScreen(state = HomeUiState(items = items), onShortcutClick = {}, onShortcutRemove = {})
     }

@@ -1,24 +1,14 @@
 package com.iappsan.carlauncher.data
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.io.IOException
-
-/**
- * Propiedad de extensión sobre Context: `context.settingsDataStore`.
- * El delegado `by preferencesDataStore` garantiza una única instancia por proceso
- * (DataStore falla si se abren dos sobre el mismo fichero).
- */
-private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 /**
  * Accesos de Home, persistidos en DataStore.
@@ -29,8 +19,6 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 class ShortcutRepository(context: Context) {
 
     private val dataStore = context.settingsDataStore
-
-    val columns: Int = 3
 
     /** Lista actual de accesos; emite de nuevo cada vez que cambia. */
     val shortcuts: Flow<List<Shortcut>> = dataStore.data

@@ -16,8 +16,8 @@ El autor es desarrollador Java/Spring Boot con poca experiencia en Kotlin: al es
 ## Convenciones
 - MVVM ligero: `ViewModel` + `StateFlow`; coroutines para trabajo en segundo plano (apps, iconos); caché de iconos (`LruCache`).
 - Inyección manual: `AppContainer` creado en `CarLauncherApp` (Application). Sin Hilt/Dagger.
-- Configuración del usuario con DataStore Preferences (`settings`).
-- Navegación sin librería: el cajón es un overlay sobre Home (`showDrawer` en `MainActivity`); "atrás" o Home lo cierran.
+- Configuración del usuario con DataStore Preferences (`settings`, en `data/SettingsStore.kt`).
+- Navegación sin librería: overlays sobre Home (`Overlay` en `MainActivity`: cajón, ajustes); "atrás" o Home los cierran.
 - Probar en el emulador `Car_HeadUnit_1024x600` (AVD 1024×600, 160dpi, horizontal).
 - Si Gradle elige el JRE de VS Code (sin `jlink`), compilar con `-Dorg.gradle.java.installations.auto-detect=false -Dorg.gradle.java.installations.paths="C:\Program Files\Java\jdk-25.0.5.0.2"`.
 - No cambiar versiones de AGP/Kotlin/Compose salvo necesidad. AGP 9 trae soporte Kotlin integrado (no hay plugin `kotlin-android`).
@@ -27,8 +27,10 @@ El autor es desarrollador Java/Spring Boot con poca experiencia en Kotlin: al es
   - `ui/drawer` — cajón de apps (fase 2).
   - `data/media` — servicio de notificaciones y sesiones multimedia.
   - `ui/media` — widget de música.
-  - `ui/theme` — tema Compose base (colores/tipografía).
-  - `theme` — motor de temas `theme.json` (fase 4).
+  - `ui/theme` — aplicación del tema en Compose (`CarLauncherTheme`, `LauncherTheme`, `ThemeViewModel`).
+  - `ui/settings` — ajustes del launcher.
+  - `ui/icons` — iconos vectoriales propios (sin librería de iconos).
+  - `theme` — motor de temas `theme.json`.
 - Textos de UI en español.
 - Comandos de adb, emulador y permisos: `docs/DEVELOPMENT.md`.
 - Compilar: `./gradlew assembleDebug` (Windows: `gradlew.bat assembleDebug`).
@@ -38,5 +40,5 @@ El autor es desarrollador Java/Spring Boot con poca experiencia en Kotlin: al es
 - **Fase 1 – Base** ✅: manifest como launcher (HOME/DEFAULT + LAUNCHER durante desarrollo, singleTask, landscape, `<queries>`), Home oscuro con rejilla de accesos grandes (Maps, Waze, Spotify, YouTube Music, Ajustes) + botón "Apps", Toast si la app no está instalada, "atrás" bloqueado.
 - **Fase 2 – Cajón de apps** ✅: `LauncherApps` (con callback de instalación/desinstalación → `AppRepository.changes`), orden alfabético con `Collator`, búsqueda sin acentos, iconos asíncronos con caché (`IconLoader`), pulsación larga → "Agregar a Home" / "Información de la app"; en Home, pulsación larga → "Quitar de Home" (el botón "Apps" no se puede quitar). Accesos persistidos en DataStore (`ShortcutRepository`).
 - **Fase 3 – Widget de música** ✅: `data/media/MediaListenerService` (vacío, solo para el permiso) + `MediaRepository` (sesiones activas, elige la que suena, carátula reducida), escucha solo entre onStart/onStop. Widget a la izquierda de Home (38% del ancho) con panel de permiso, estado vacío y controles grandes; iconos vectoriales propios (`MediaIcons`). Carátulas solo por Bitmap (no `ART_URI`) por ahora.
-- **Fase 4 – Motor de temas**: esquema `theme.json` + data class (kotlinx.serialization), carga desde almacenamiento externo de la app, aplicación a `ColorScheme` y layout, selector en ajustes, documentación en `docs/THEMES.md`.
+- **Fase 4 – Motor de temas** ✅: `theme/ThemeSpec` (kotlinx.serialization, todo opcional) → `ThemeRepository` (assets `builtin:<dir>` + `getExternalFilesDir("themes")` `file:<dir>`, imágenes reducidas, fuente, avisos no fatales) → `LoadedTheme` (ColorScheme + `ThemeLayout` + iconos). Compose: `CarLauncherTheme(theme)` + `LauncherTheme.layout/icons` (CompositionLocal) + `ThemeBackground`. Selector en `ui/settings/SettingsScreen` (Apps → Ajustes). Formato en `docs/THEMES.md`, ejemplo en `docs/examples/atardecer`.
 - **Fase 5 – Pulido**: día/noche, reloj grande, ajustes del launcher (columnas, accesos, tema), revisión de rendimiento.

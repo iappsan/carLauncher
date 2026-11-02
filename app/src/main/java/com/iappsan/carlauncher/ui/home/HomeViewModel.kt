@@ -28,7 +28,6 @@ data class ShortcutItem(
 
 data class HomeUiState(
     val items: List<ShortcutItem> = emptyList(),
-    val columns: Int = 3,
 )
 
 class HomeViewModel(
@@ -43,10 +42,10 @@ class HomeViewModel(
      */
     val state: StateFlow<HomeUiState> =
         combine(shortcutRepository.shortcuts, appRepository.changes) { shortcuts, _ ->
-            HomeUiState(items = resolve(shortcuts), columns = shortcutRepository.columns)
+            HomeUiState(items = resolve(shortcuts))
         }
             .flowOn(Dispatchers.Default) // el trabajo de arriba (iconos, lista de apps) va en segundo plano
-            .stateIn(viewModelScope, SharingStarted.Eagerly, HomeUiState(columns = shortcutRepository.columns))
+            .stateIn(viewModelScope, SharingStarted.Eagerly, HomeUiState())
 
     fun removeShortcut(shortcut: Shortcut) {
         viewModelScope.launch { shortcutRepository.remove(shortcut.id) }
@@ -64,7 +63,7 @@ class HomeViewModel(
                         available = available,
                     )
                 }
-                ShortcutTarget.SystemSettings,
+                ShortcutTarget.SystemSettings -> ShortcutItem(shortcut, appRepository.settingsIcon(), available = true)
                 ShortcutTarget.AppDrawer -> ShortcutItem(shortcut, icon = null, available = true)
             }
         }

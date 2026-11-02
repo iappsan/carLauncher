@@ -1,0 +1,37 @@
+{
+  // Tema de ejemplo: fondo con imagen, paneles semitransparentes, fuente serif e icono propio.
+  "name": "Atardecer",
+  "author": "CarLauncher",
+  "colors": {
+    "background": "#1B1026",
+    "onBackground": "#FFF3E6",
+    "surface": "#B32A1B3D",          // #AARRGGBB: B3 ≈ 70 % opaco, deja ver el fondo
+    "onSurface": "#FFF3E6",
+    "onSurfaceVariant": "#E8CBB8",
+    "primary": "#FF8A3D",
+    "onPrimary": "#2B1200",
+    "primaryContainer": "#CCB8452A",
+    "onPrimaryContainer": "#FFE6D6",
+    "secondaryContainer": "#4A2D52",
+    "onSecondaryContainer": "#F6DDF0"
+  },
+  "background": {
+    "image": "background.png",
+    "dim": 0.25
+  },
+  "font": {
+    "family": "serif",
+    "scale": 1.05
+  },
+  "layout": {
+    "columns": 3,
+    "cornerRadius": 32,
+    "spacing": 20,
+    "mediaPanelWeight": 0.4,
+    "iconSize": 60,
+    "showLabels": true
+  },
+  "icons": {
+    "apps": "icons/apps.png"
+  }
+}

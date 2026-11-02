@@ -52,6 +52,7 @@ import com.iappsan.carlauncher.R
 import com.iappsan.carlauncher.data.AppEntry
 import com.iappsan.carlauncher.data.IconLoader
 import com.iappsan.carlauncher.ui.theme.CarLauncherTheme
+import com.iappsan.carlauncher.ui.theme.LauncherTheme
 
 private val IconSize = 56.dp
 
@@ -61,6 +62,7 @@ interface DrawerActions {
     fun onLaunch(app: AppEntry)
     fun onAddToHome(app: AppEntry)
     fun onAppInfo(app: AppEntry)
+    fun onOpenSettings()
     fun onClose()
 }
 
@@ -84,6 +86,7 @@ fun DrawerScreen(
                 onQueryChange = actions::onQueryChange,
                 // "Buscar" en el teclado abre el primer resultado
                 onSearch = { state.apps.firstOrNull()?.let(actions::onLaunch) },
+                onOpenSettings = actions::onOpenSettings,
                 onClose = actions::onClose,
             )
             Spacer(Modifier.height(12.dp))
@@ -120,6 +123,7 @@ private fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
+    onOpenSettings: () -> Unit,
     onClose: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
@@ -138,6 +142,10 @@ private fun SearchBar(
             }),
         )
         Spacer(Modifier.size(12.dp))
+        FilledTonalButton(onClick = onOpenSettings, modifier = Modifier.height(56.dp)) {
+            Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.titleMedium)
+        }
+        Spacer(Modifier.size(12.dp))
         FilledTonalButton(onClick = onClose, modifier = Modifier.height(56.dp)) {
             Text(stringResource(R.string.drawer_close), style = MaterialTheme.typography.titleMedium)
         }
@@ -155,7 +163,8 @@ private fun AppCell(
     var menuOpen by remember { mutableStateOf(false) }
 
     // produceState: arranca con el icono en caché (si lo hay) y lo carga en segundo plano si no.
-    val icon by produceState(initialValue = iconLoader.cached(app.packageName), app.packageName) {
+    val themeIcon = LauncherTheme.icons[app.packageName]
+    val icon by produceState(initialValue = themeIcon ?: iconLoader.cached(app.packageName), app.packageName, themeIcon) {
         if (value == null) value = iconLoader.load(app.packageName)
     }
 
@@ -163,7 +172,7 @@ private fun AppCell(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(LauncherTheme.layout.cornerRadius / 2))
                 .combinedClickable(
                     onClick = { actions.onLaunch(app) },
                     onLongClick = { menuOpen = true },
@@ -240,6 +249,7 @@ private fun DrawerScreenPreview() {
         override fun onLaunch(app: AppEntry) {}
         override fun onAddToHome(app: AppEntry) {}
         override fun onAppInfo(app: AppEntry) {}
+        override fun onOpenSettings() {}
         override fun onClose() {}
     }
     CarLauncherTheme {

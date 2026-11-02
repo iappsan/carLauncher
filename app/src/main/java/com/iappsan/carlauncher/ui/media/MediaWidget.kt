@@ -42,7 +42,9 @@ import androidx.compose.ui.unit.sp
 import com.iappsan.carlauncher.R
 import com.iappsan.carlauncher.data.media.MediaState
 import com.iappsan.carlauncher.data.media.NowPlaying
+import com.iappsan.carlauncher.ui.icons.LauncherIcons
 import com.iappsan.carlauncher.ui.theme.CarLauncherTheme
+import com.iappsan.carlauncher.ui.theme.LauncherTheme
 
 /** Callbacks del widget de música. */
 interface MediaActions {
@@ -61,7 +63,7 @@ fun MediaWidget(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(LauncherTheme.layout.cornerRadius),
         color = MaterialTheme.colorScheme.surface,
     ) {
         val nowPlaying = state.nowPlaying
@@ -197,15 +199,15 @@ private fun Controls(isPlaying: Boolean, actions: MediaActions) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SecondaryControl(MediaIcons.Previous, stringResource(R.string.media_previous), actions::onPrevious)
+        SecondaryControl(LauncherIcons.Previous, stringResource(R.string.media_previous), actions::onPrevious)
         FilledIconButton(onClick = actions::onPlayPause, modifier = Modifier.size(76.dp)) {
             Icon(
-                imageVector = if (isPlaying) MediaIcons.Pause else MediaIcons.Play,
+                imageVector = if (isPlaying) LauncherIcons.Pause else LauncherIcons.Play,
                 contentDescription = stringResource(if (isPlaying) R.string.media_pause else R.string.media_play),
                 modifier = Modifier.size(44.dp),
             )
         }
-        SecondaryControl(MediaIcons.Next, stringResource(R.string.media_next), actions::onNext)
+        SecondaryControl(LauncherIcons.Next, stringResource(R.string.media_next), actions::onNext)
     }
 }
 

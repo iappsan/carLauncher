@@ -22,4 +22,11 @@
     <string name="media_play">Reproducir</string>
     <string name="media_pause">Pausa</string>
     <string name="media_next">Siguiente</string>
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_themes_folder">Carpeta de temas</string>
+    <string name="settings_themes_hint">Copia cada tema como una carpeta con su theme.json (por USB o adb) y pulsa Recargar. Formato: docs/THEMES.md.</string>
+    <string name="settings_storage_unavailable">Almacenamiento no disponible</string>
+    <string name="settings_reload">Recargar temas</string>
+    <string name="settings_theme_warnings">Avisos del tema actual</string>
 </resources>

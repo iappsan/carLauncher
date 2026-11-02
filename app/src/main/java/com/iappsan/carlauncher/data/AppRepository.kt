@@ -8,6 +8,7 @@ import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.os.Process
 import android.os.UserHandle
+import android.provider.Settings
 import android.util.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -114,6 +115,13 @@ class AppRepository(private val context: Context) : IconLoader {
         } catch (_: PackageManager.NameNotFoundException) {
             null
         }
+    }
+
+    /** Icono de la app de ajustes del sistema (el package varía según el fabricante). */
+    fun settingsIcon(): ImageBitmap? {
+        val packageName = pm.resolveActivity(Intent(Settings.ACTION_SETTINGS), 0)
+            ?.activityInfo?.packageName ?: return null
+        return loadIcon(packageName)
     }
 
     /** Intent para abrir la app, o `null` si no está instalada. */

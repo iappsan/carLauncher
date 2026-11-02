@@ -19,6 +19,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,7 +37,11 @@ import com.iappsan.carlauncher.ui.home.HomeViewModel
 import com.iappsan.carlauncher.ui.media.MediaActions
 import com.iappsan.carlauncher.ui.media.MediaViewModel
 import com.iappsan.carlauncher.ui.media.MediaWidget
+import com.iappsan.carlauncher.ui.settings.SettingsActions
+import com.iappsan.carlauncher.ui.settings.SettingsScreen
 import com.iappsan.carlauncher.ui.theme.CarLauncherTheme
+import com.iappsan.carlauncher.ui.theme.ThemeBackground
+import com.iappsan.carlauncher.ui.theme.ThemeViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -46,9 +51,13 @@ class MainActivity : ComponentActivity() {
     private val homeViewModel: HomeViewModel by viewModels { HomeViewModel.factory(container) }
     private val drawerViewModel: DrawerViewModel by viewModels { DrawerViewModel.factory(container) }
     private val mediaViewModel: MediaViewModel by viewModels { MediaViewModel.factory(container) }
+    private val themeViewModel: ThemeViewModel by viewModels { ThemeViewModel.factory(container) }
 
-    /** Navegación mínima sin librería: el cajón se pinta encima de Home cuando es `true`. */
-    private var showDrawer by mutableStateOf(false)
+    /** Pantallas que se pintan encima de Home. */
+    private enum class Overlay { None, Drawer, Settings }
+
+    /** Navegación mínima sin librería: qué overlay hay abierto encima de Home. */
+    private var overlay by mutableStateOf(Overlay.None)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,8 +69,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             // collectAsState convierte el StateFlow en estado de Compose: al cambiar, se repinta.
             val homeState by homeViewModel.state.collectAsState()
-            CarLauncherTheme {
+            val theme by themeViewModel.theme.collectAsState()
+            CarLauncherTheme(theme) {
+                // Registrado después que el callback no-op, así que tiene prioridad mientras hay un overlay.
+                BackHandler(enabled = overlay != Overlay.None) { closeOverlay() }
                 Box {
+                    ThemeBackground()
                     HomeScreen(
                         state = homeState,
                         onShortcutClick = ::onShortcutClick,
@@ -71,13 +84,7 @@ class MainActivity : ComponentActivity() {
                             MediaWidget(state = mediaState, actions = mediaActions)
                         },
                     )
-                    AnimatedVisibility(
-                        visible = showDrawer,
-                        enter = fadeIn() + slideInVertically { it / 10 },
-                        exit = fadeOut() + slideOutVertically { it / 10 },
-                    ) {
-                        // Registrado después que el callback no-op, así que tiene prioridad mientras el cajón está abierto.
-                        BackHandler { closeDrawer() }
+                    OverlayVisibility(overlay == Overlay.Drawer) {
                         val drawerState by drawerViewModel.state.collectAsState()
                         DrawerScreen(
                             state = drawerState,
@@ -86,9 +93,30 @@ class MainActivity : ComponentActivity() {
                             actions = drawerActions,
                         )
                     }
+                    OverlayVisibility(overlay == Overlay.Settings) {
+                        val entries by themeViewModel.entries.collectAsState()
+                        val selectedId by themeViewModel.selectedId.collectAsState()
+                        SettingsScreen(
+                            entries = entries,
+                            selectedId = selectedId,
+                            currentWarnings = theme.warnings,
+                            themesPath = themeViewModel.userThemesPath,
+                            actions = settingsActions,
+                        )
+                    }
                 }
             }
         }
+    }
+
+    /** Animación común de entrada/salida de los overlays. */
+    @Composable
+    private fun OverlayVisibility(visible: Boolean, content: @Composable () -> Unit) {
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn() + slideInVertically { it / 10 },
+            exit = fadeOut() + slideOutVertically { it / 10 },
+        ) { content() }
     }
 
     // Solo escuchamos las sesiones de música mientras el launcher está visible.
@@ -105,11 +133,11 @@ class MainActivity : ComponentActivity() {
     /** Pulsar Home estando ya en el launcher (p. ej. con el cajón abierto) vuelve a la pantalla principal. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        closeDrawer()
+        closeOverlay()
     }
 
-    private fun closeDrawer() {
-        showDrawer = false
+    private fun closeOverlay() {
+        overlay = Overlay.None
         drawerViewModel.onQueryChange("")
     }
 
@@ -133,7 +161,18 @@ class MainActivity : ComponentActivity() {
             app.label,
         )
 
-        override fun onClose() = closeDrawer()
+        override fun onOpenSettings() {
+            themeViewModel.refresh() // busca temas nuevos copiados desde la última vez
+            overlay = Overlay.Settings
+        }
+
+        override fun onClose() = closeOverlay()
+    }
+
+    private val settingsActions = object : SettingsActions {
+        override fun onSelectTheme(id: String) = themeViewModel.select(id)
+        override fun onReloadThemes() = themeViewModel.refresh()
+        override fun onClose() = closeOverlay()
     }
 
     private val mediaActions = object : MediaActions {
@@ -189,7 +228,7 @@ class MainActivity : ComponentActivity() {
                 Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 shortcut.label,
             )
-            ShortcutTarget.AppDrawer -> showDrawer = true
+            ShortcutTarget.AppDrawer -> overlay = Overlay.Drawer
         }
     }
 
