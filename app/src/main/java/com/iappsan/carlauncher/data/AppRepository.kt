@@ -13,6 +13,7 @@ import android.util.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
+import com.iappsan.carlauncher.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -97,6 +98,8 @@ class AppRepository(private val context: Context) : IconLoader {
      * 1. LauncherApps (la API oficial para launchers).
      * 2. PackageManager con MAIN/LAUNCHER y MAIN/LEANBACK_LAUNCHER (apps tipo TV).
      * 3. Cualquier app instalada con actividad de inicio (`getLaunchIntentForPackage`, incluye CATEGORY_INFO).
+     * 4. Los ajustes de Android: hay estéreos que les quitan el icono, y si además se quita el acceso
+     *    "Ajustes" de Home no quedaría forma de abrirlos.
      * Se queda una entrada por actividad; las fuentes 2–3 solo añaden packages que aún no aparecen.
      */
     private fun loadApps(): List<AppEntry> {
@@ -128,6 +131,18 @@ class AppRepository(private val context: Context) : IconLoader {
             add(AppEntry(app.packageName, app.loadLabel(pm).toString(), component))
         }
 
+        pm.resolveActivity(Intent(Settings.ACTION_SETTINGS), 0)?.activityInfo?.let { activity ->
+            if (!known(activity.packageName)) {
+                add(
+                    AppEntry(
+                        activity.packageName,
+                        context.getString(R.string.system_settings_label),
+                        ComponentName(activity.packageName, activity.name),
+                    ),
+                )
+            }
+        }
+
         val collator = Collator.getInstance() // orden según el idioma: "Ñ" tras "N", ignora acentos
         return byComponent.values.sortedWith(compareBy(collator) { it.label })
     }
@@ -155,6 +170,26 @@ class AppRepository(private val context: Context) : IconLoader {
         val packageName = pm.resolveActivity(Intent(Settings.ACTION_SETTINGS), 0)
             ?.activityInfo?.packageName ?: return null
         return loadIcon(packageName)
+    }
+
+    /**
+     * Abre una app por su package (accesos de Home). Si no declara actividad de inicio estándar
+     * (p. ej. ajustes de Android en algunos estéreos), usa la entrada que encontró el cajón.
+     * Devuelve `false` si no se pudo.
+     */
+    fun launchPackage(packageName: String): Boolean {
+        launchIntent(packageName)?.let { intent ->
+            return try {
+                context.startActivity(intent)
+                true
+            } catch (_: ActivityNotFoundException) {
+                false
+            } catch (_: SecurityException) {
+                false
+            }
+        }
+        val entry = installedApps().firstOrNull { it.packageName == packageName } ?: return false
+        return launch(entry.component)
     }
 
     /** Intent para abrir la app, o `null` si no está instalada. */

@@ -10,6 +10,7 @@
     <string name="drawer_show_hidden">Ocultas (%1$d)</string>
     <string name="drawer_show_all">Ver todas</string>
     <string name="hide_app">Ocultar</string>
+    <string name="system_settings_label">Ajustes de Android</string>
     <string name="unhide_app">Mostrar en el cajón</string>
     <string name="app_hidden">%1$s oculta</string>
     <string name="app_unhidden">%1$s visible de nuevo</string>

@@ -381,11 +381,8 @@ class MainActivity : ComponentActivity() {
     private fun onShortcutClick(shortcut: Shortcut) {
         when (val target = shortcut.target) {
             is ShortcutTarget.App -> {
-                val intent = container.appRepository.launchIntent(target.packageName)
-                if (intent == null) {
+                if (!container.appRepository.launchPackage(target.packageName)) {
                     toast(getString(R.string.app_not_installed, shortcut.label))
-                } else {
-                    startSafely(intent, shortcut.label)
                 }
             }
             ShortcutTarget.SystemSettings -> startSafely(
