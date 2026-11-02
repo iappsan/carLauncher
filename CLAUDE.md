@@ -17,7 +17,7 @@ El autor es desarrollador Java/Spring Boot con poca experiencia en Kotlin: al es
 - MVVM ligero: `ViewModel` + `StateFlow`; coroutines para trabajo en segundo plano (apps, iconos); caché de iconos (`LruCache`).
 - Inyección manual: `AppContainer` creado en `CarLauncherApp` (Application). Sin Hilt/Dagger.
 - Configuración del usuario con DataStore Preferences (`settings`, en `data/SettingsStore.kt`).
-- Navegación sin librería: overlays sobre Home (`Overlay` en `MainActivity`: cajón, ajustes); "atrás" o Home los cierran.
+- Navegación sin librería: `Overlay` en `MainActivity` (cajón, ajustes); "atrás" o Home los cierran. Home y cajón son las dos páginas de un `HorizontalPager` (deslizar a la izquierda abre el cajón), sincronizado con `overlay`; Ajustes va encima como overlay.
 - Probar en el emulador `Car_HeadUnit_1024x600` (AVD 1024×600, 160dpi, horizontal).
 - Si Gradle elige el JRE de VS Code (sin `jlink`), compilar con `--no-daemon -Dorg.gradle.java.installations.auto-detect=false -Dorg.gradle.java.installations.paths="C:\Program Files\Java\jdk-25.0.5.0.2"`.
 - Probar siempre también el **release** (R8): hay errores que solo aparecen ahí.

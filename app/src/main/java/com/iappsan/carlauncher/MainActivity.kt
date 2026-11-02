@@ -23,6 +23,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -94,6 +96,11 @@ class MainActivity : ComponentActivity() {
     /** Pantallas que se pintan encima de Home. */
     private enum class Overlay { None, Drawer, Settings }
 
+    private companion object {
+        const val HOME_PAGE = 0
+        const val DRAWER_PAGE = 1
+    }
+
     /** Navegación mínima sin librería: qué overlay hay abierto encima de Home. */
     private var overlay by mutableStateOf(Overlay.None)
 
@@ -138,47 +145,71 @@ class MainActivity : ComponentActivity() {
                     val permissions by drivingViewModel.permissions.collectAsState()
                     // Copia local: así Kotlin sabe que no cambia y permite usarla como no-null (smart cast).
                     val nav = navigation
-                    HomeScreen(
-                        state = homeState,
-                        onShortcutClick = ::onShortcutClick,
-                        onShortcutRemove = homeViewModel::removeShortcut,
-                        navigating = nav != null,
-                        mediaPanel = {
-                            val mediaState by mediaViewModel.state.collectAsState()
-                            MediaWidget(state = mediaState, actions = mediaActions)
-                        },
-                        navigationPanel = {
-                            if (nav != null) {
-                                NavigationCard(
-                                    navigation = nav,
-                                    speedKmh = speedKmh,
-                                    speedUnit = homeState.speedUnit,
-                                    showSpeed = homeState.showSpeed && permissions.location,
-                                    onClick = { openApp(nav.packageName) },
-                                )
-                            }
-                        },
-                        mediaBar = {
-                            val mediaState by mediaViewModel.state.collectAsState()
-                            MediaBar(state = mediaState, actions = mediaActions)
-                        },
-                        headerExtras = {
-                            // En navegación la velocidad va grande en la tarjeta
-                            if (homeState.showSpeed && permissions.location && nav == null) {
-                                SpeedReadout(speedKmh, homeState.speedUnit, large = false)
-                                Spacer(Modifier.width(16.dp))
-                            }
-                            BluetoothIndicator(bluetooth, onClick = { onBluetoothClick(bluetooth.permissionGranted) })
-                        },
-                    )
-                    OverlayVisibility(overlay == Overlay.Drawer) {
-                        val drawerState by drawerViewModel.state.collectAsState()
-                        DrawerScreen(
-                            state = drawerState,
-                            query = drawerViewModel.query,
-                            iconLoader = container.appRepository,
-                            actions = drawerActions,
-                        )
+
+                    // Home y cajón son dos páginas: se pasa de una a otra deslizando, o con el botón "Apps".
+                    val pager = rememberPagerState(pageCount = { 2 })
+                    // overlay → página (botón "Apps", Home del sistema, cerrar)…
+                    LaunchedEffect(overlay) {
+                        val target = if (overlay == Overlay.Drawer) DRAWER_PAGE else if (overlay == Overlay.None) HOME_PAGE else null
+                        if (target != null && pager.currentPage != target) pager.animateScrollToPage(target)
+                    }
+                    // …y página → overlay (cuando el usuario desliza con el dedo).
+                    LaunchedEffect(pager.settledPage) {
+                        when {
+                            pager.settledPage == DRAWER_PAGE && overlay == Overlay.None -> overlay = Overlay.Drawer
+                            pager.settledPage == HOME_PAGE && overlay == Overlay.Drawer -> closeOverlay()
+                        }
+                    }
+                    HorizontalPager(
+                        state = pager,
+                        // Con Ajustes abiertos encima no se desliza por debajo.
+                        userScrollEnabled = overlay != Overlay.Settings,
+                        // `key`: cada página conserva su estado (scroll, etc.) al moverse.
+                        key = { it },
+                    ) { page ->
+                        if (page == HOME_PAGE) {
+                            HomeScreen(
+                                state = homeState,
+                                onShortcutClick = ::onShortcutClick,
+                                onShortcutRemove = homeViewModel::removeShortcut,
+                                navigating = nav != null,
+                                mediaPanel = {
+                                    val mediaState by mediaViewModel.state.collectAsState()
+                                    MediaWidget(state = mediaState, actions = mediaActions)
+                                },
+                                navigationPanel = {
+                                    if (nav != null) {
+                                        NavigationCard(
+                                            navigation = nav,
+                                            speedKmh = speedKmh,
+                                            speedUnit = homeState.speedUnit,
+                                            showSpeed = homeState.showSpeed && permissions.location,
+                                            onClick = { openApp(nav.packageName) },
+                                        )
+                                    }
+                                },
+                                mediaBar = {
+                                    val mediaState by mediaViewModel.state.collectAsState()
+                                    MediaBar(state = mediaState, actions = mediaActions)
+                                },
+                                headerExtras = {
+                                    // En navegación la velocidad va grande en la tarjeta
+                                    if (homeState.showSpeed && permissions.location && nav == null) {
+                                        SpeedReadout(speedKmh, homeState.speedUnit, large = false)
+                                        Spacer(Modifier.width(16.dp))
+                                    }
+                                    BluetoothIndicator(bluetooth, onClick = { onBluetoothClick(bluetooth.permissionGranted) })
+                                },
+                            )
+                        } else {
+                            val drawerState by drawerViewModel.state.collectAsState()
+                            DrawerScreen(
+                                state = drawerState,
+                                query = drawerViewModel.query,
+                                iconLoader = container.appRepository,
+                                actions = drawerActions,
+                            )
+                        }
                     }
                     OverlayVisibility(overlay == Overlay.Settings) {
                         val settingsState by settingsViewModel.state.collectAsState()
