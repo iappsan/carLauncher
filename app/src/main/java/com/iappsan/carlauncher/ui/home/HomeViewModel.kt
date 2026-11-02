@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.iappsan.carlauncher.AppContainer
 import com.iappsan.carlauncher.data.AppRepository
+import com.iappsan.carlauncher.data.HomeLayout
 import com.iappsan.carlauncher.data.LauncherSettingsRepository
 import com.iappsan.carlauncher.data.Shortcut
 import com.iappsan.carlauncher.data.ShortcutList
@@ -34,6 +35,7 @@ data class HomeUiState(
     /** Accesos de la vista de navegación (cuando hay una ruta activa). */
     val navItems: List<ShortcutItem> = emptyList(),
     val showClock: Boolean = true,
+    val homeLayout: HomeLayout = HomeLayout.Grid,
     val showSpeed: Boolean = true,
     val speedUnit: SpeedUnit = SpeedUnit.Kmh,
 )
@@ -60,6 +62,7 @@ class HomeViewModel(
                 items = resolve(home),
                 navItems = resolve(nav),
                 showClock = settings.showClock,
+                homeLayout = settings.homeLayout,
                 showSpeed = settings.showSpeed,
                 speedUnit = settings.speedUnit,
             )

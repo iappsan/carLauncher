@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.iappsan.carlauncher.R
 import com.iappsan.carlauncher.data.DayNightMode
+import com.iappsan.carlauncher.data.HomeLayout
 import com.iappsan.carlauncher.data.LauncherSettings
 import com.iappsan.carlauncher.data.SpeedUnit
 import com.iappsan.carlauncher.data.location.SunTimes
@@ -27,6 +28,20 @@ internal fun DisplaySettings(settings: LauncherSettings, actions: SettingsAction
         )
         SectionSpacer()
         SettingCard(
+            title = stringResource(R.string.settings_home_layout),
+            description = stringResource(R.string.settings_home_layout_desc),
+        ) {
+            ChoiceRow(
+                options = listOf(
+                    HomeLayout.Grid to stringResource(R.string.settings_home_layout_grid),
+                    HomeLayout.Dock to stringResource(R.string.settings_home_layout_dock),
+                ),
+                selected = settings.homeLayout,
+                onSelect = actions::onHomeLayoutChange,
+            )
+        }
+        SectionSpacer()
+        SettingCard(
             title = stringResource(R.string.settings_columns),
             description = stringResource(R.string.settings_columns_desc),
         ) {
@@ -35,6 +50,8 @@ internal fun DisplaySettings(settings: LauncherSettings, actions: SettingsAction
                 options = listOf(0 to stringResource(R.string.settings_columns_theme)) + (2..5).map { it to "$it" },
                 selected = settings.columns,
                 onSelect = actions::onColumnsChange,
+                // En el dock los accesos van en una sola fila: las columnas no aplican.
+                enabled = settings.homeLayout == HomeLayout.Grid,
             )
         }
         SectionSpacer()

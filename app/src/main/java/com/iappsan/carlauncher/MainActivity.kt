@@ -39,6 +39,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.core.net.toUri
 import com.iappsan.carlauncher.data.AppEntry
 import com.iappsan.carlauncher.data.DayNightMode
+import com.iappsan.carlauncher.data.HomeLayout
 import com.iappsan.carlauncher.data.ShortcutList
 import com.iappsan.carlauncher.data.SpeedUnit
 import com.iappsan.carlauncher.data.Shortcut
@@ -314,6 +315,7 @@ class MainActivity : ComponentActivity() {
     private val settingsActions = object : SettingsActions {
         override fun onClose() = closeOverlay()
         override fun onShowClockChange(show: Boolean) = settingsViewModel.setShowClock(show)
+        override fun onHomeLayoutChange(layout: HomeLayout) = settingsViewModel.setHomeLayout(layout)
         override fun onColumnsChange(columns: Int) = settingsViewModel.setColumns(columns)
         override fun onShowSpeedChange(show: Boolean) = settingsViewModel.setShowSpeed(show)
         override fun onSpeedUnitChange(unit: SpeedUnit) = settingsViewModel.setSpeedUnit(unit)

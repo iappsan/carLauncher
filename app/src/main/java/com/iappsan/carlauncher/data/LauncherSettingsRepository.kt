@@ -22,6 +22,9 @@ import java.time.LocalTime
  */
 enum class DayNightMode { Sun, Auto, AlwaysNight, AlwaysDay }
 
+/** Cómo se colocan los accesos en Home: rejilla a la derecha o dock inferior (estilo Mac). */
+enum class HomeLayout { Grid, Dock }
+
 enum class SpeedUnit(val label: String, val fromKmh: Float) {
     Kmh("km/h", 1f),
     Mph("mph", 0.621371f),
@@ -30,6 +33,7 @@ enum class SpeedUnit(val label: String, val fromKmh: Float) {
 /** Preferencias del usuario sobre el launcher (lo que no depende del tema). */
 data class LauncherSettings(
     val showClock: Boolean = true,
+    val homeLayout: HomeLayout = HomeLayout.Grid,
     /** Columnas de la rejilla; 0 = las que diga el tema. */
     val columns: Int = 0,
     val dayNightMode: DayNightMode = DayNightMode.Sun,
@@ -72,6 +76,7 @@ class LauncherSettingsRepository(context: Context) {
         .distinctUntilChanged()
 
     suspend fun setShowClock(value: Boolean) = edit { it[KEY_SHOW_CLOCK] = value }
+    suspend fun setHomeLayout(value: HomeLayout) = edit { it[KEY_HOME_LAYOUT] = value.name }
     suspend fun setColumns(value: Int) = edit { it[KEY_COLUMNS] = value.coerceIn(0, 6) }
     suspend fun setDayNightMode(value: DayNightMode) = edit { it[KEY_MODE] = value.name }
     suspend fun setDayStartHour(value: Int) = edit { it[KEY_DAY_START] = value.mod(24) }
@@ -96,6 +101,7 @@ class LauncherSettingsRepository(context: Context) {
         val d = LauncherSettings()
         return LauncherSettings(
             showClock = this[KEY_SHOW_CLOCK] ?: d.showClock,
+            homeLayout = enumOrNull<HomeLayout>(this[KEY_HOME_LAYOUT]) ?: d.homeLayout,
             columns = this[KEY_COLUMNS] ?: d.columns,
             // runCatching: si el valor guardado no es un enum válido, usar el defecto
             dayNightMode = enumOrNull<DayNightMode>(this[KEY_MODE]) ?: d.dayNightMode,
@@ -114,6 +120,7 @@ class LauncherSettingsRepository(context: Context) {
             name?.let { runCatching { enumValueOf<T>(it) }.getOrNull() }
 
         val KEY_SHOW_CLOCK = booleanPreferencesKey("show_clock")
+        val KEY_HOME_LAYOUT = stringPreferencesKey("home_layout")
         val KEY_COLUMNS = intPreferencesKey("columns")
         val KEY_MODE = stringPreferencesKey("day_night_mode")
         val KEY_DAY_START = intPreferencesKey("day_start_hour")

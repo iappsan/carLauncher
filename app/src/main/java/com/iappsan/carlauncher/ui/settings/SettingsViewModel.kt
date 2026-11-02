@@ -8,6 +8,7 @@ import com.iappsan.carlauncher.AppContainer
 import com.iappsan.carlauncher.data.AppEntry
 import com.iappsan.carlauncher.data.AppRepository
 import com.iappsan.carlauncher.data.DayNightMode
+import com.iappsan.carlauncher.data.HomeLayout
 import com.iappsan.carlauncher.data.LauncherSettings
 import com.iappsan.carlauncher.data.LauncherSettingsRepository
 import com.iappsan.carlauncher.data.Shortcut
@@ -72,6 +73,7 @@ class SettingsViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setShowClock(value: Boolean) = save { settingsRepository.setShowClock(value) }
+    fun setHomeLayout(value: HomeLayout) = save { settingsRepository.setHomeLayout(value) }
     fun setColumns(value: Int) = save { settingsRepository.setColumns(value) }
     fun setDayNightMode(value: DayNightMode) = save { settingsRepository.setDayNightMode(value) }
     fun setDayStartHour(value: Int) = save { settingsRepository.setDayStartHour(value) }

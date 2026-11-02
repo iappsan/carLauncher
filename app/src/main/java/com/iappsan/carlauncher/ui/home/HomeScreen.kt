@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import com.iappsan.carlauncher.R
+import com.iappsan.carlauncher.data.HomeLayout
 import com.iappsan.carlauncher.data.Shortcut
 import com.iappsan.carlauncher.data.ShortcutList
 import com.iappsan.carlauncher.data.ShortcutTarget
@@ -77,40 +78,65 @@ fun HomeScreen(
     // En navegación siempre hay panel izquierdo, aunque el tema oculte el widget de música.
     val panelWeight = if (navigating) maxOf(layout.mediaPanelWeight, 0.38f) else layout.mediaPanelWeight
     val list = if (navigating) ShortcutList.Navigation else ShortcutList.Home
+    val items = if (navigating) state.navItems else state.items
+    val dock = state.homeLayout == HomeLayout.Dock
 
     // Sin fondo propio: lo pinta ThemeBackground detrás (color o imagen del tema).
-    Row(
+    Column(
         modifier = modifier
             .fillMaxSize()
             // Deja espacio para barras del sistema / recortes de pantalla
             .safeDrawingPadding()
             .padding(layout.spacing),
-        horizontalArrangement = Arrangement.spacedBy(layout.spacing),
+        verticalArrangement = Arrangement.spacedBy(layout.spacing),
     ) {
-        if (panelWeight > 0f) {
-            // Crossfade: transición suave al empezar/terminar una ruta
-            Crossfade(targetState = navigating, modifier = Modifier.weight(panelWeight).fillMaxHeight(), label = "panel") { nav ->
-                Box(Modifier.fillMaxSize()) { if (nav) navigationPanel() else mediaPanel() }
-            }
-        }
-        Column(
-            modifier = Modifier.weight(1f - panelWeight),
-            verticalArrangement = Arrangement.spacedBy(layout.spacing / 2),
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(layout.spacing),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (state.showClock) ClockHeader()
-                Spacer(Modifier.weight(1f))
-                headerExtras()
+            if (panelWeight > 0f) {
+                // Crossfade: transición suave al empezar/terminar una ruta
+                Crossfade(targetState = navigating, modifier = Modifier.weight(panelWeight).fillMaxHeight(), label = "panel") { nav ->
+                    Box(Modifier.fillMaxSize()) { if (nav) navigationPanel() else mediaPanel() }
+                }
             }
-            ShortcutGrid(
-                items = if (navigating) state.navItems else state.items,
-                columns = layout.columns,
-                onShortcutClick = onShortcutClick,
-                onShortcutRemove = { onShortcutRemove(list, it) },
-                modifier = Modifier.weight(1f),
-            )
-            if (navigating) mediaBar()
+            Column(
+                modifier = Modifier.weight(1f - panelWeight),
+                verticalArrangement = Arrangement.spacedBy(layout.spacing / 2),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Con dock, el reloj se pinta en grande en el escenario.
+                    if (state.showClock && !dock) ClockHeader()
+                    Spacer(Modifier.weight(1f))
+                    headerExtras()
+                }
+                if (dock) {
+                    Stage(showClock = state.showClock, modifier = Modifier.weight(1f))
+                } else {
+                    ShortcutGrid(
+                        items = items,
+                        columns = layout.columns,
+                        onShortcutClick = onShortcutClick,
+                        onShortcutRemove = { onShortcutRemove(list, it) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                if (navigating) mediaBar()
+            }
         }
+        if (dock) {
+            Dock(items = items, onShortcutClick = onShortcutClick, onShortcutRemove = { onShortcutRemove(list, it) })
+        }
+    }
+}
+
+/**
+ * Hueco libre de arriba en modo dock. Por ahora lleva el reloj centrado; aquí irá el modelo 3D del carro.
+ */
+@Composable
+private fun Stage(showClock: Boolean, modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (showClock) ClockHeader()
     }
 }
 
@@ -212,20 +238,26 @@ private fun ShortcutTile(
             }
         }
 
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.remove_from_home)) },
-                onClick = {
-                    menuOpen = false
-                    onRemove()
-                },
-            )
-        }
+        RemoveShortcutMenu(expanded = menuOpen, onDismiss = { menuOpen = false }, onRemove = onRemove)
+    }
+}
+
+/** Menú de pulsación larga de un acceso (rejilla y dock). */
+@Composable
+internal fun RemoveShortcutMenu(expanded: Boolean, onDismiss: () -> Unit, onRemove: () -> Unit) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.remove_from_home)) },
+            onClick = {
+                onDismiss()
+                onRemove()
+            },
+        )
     }
 }
 
 @Composable
-private fun TileIcon(item: ShortcutItem, size: Dp) {
+internal fun TileIcon(item: ShortcutItem, size: Dp) {
     // Prioridad: icono del tema > icono de la app > vector propio ("Apps") > inicial
     val icon = LauncherTheme.icons[item.shortcut.themeIconKey] ?: item.icon
     when {

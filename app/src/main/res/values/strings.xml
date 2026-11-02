@@ -34,6 +34,10 @@
     <string name="settings_section_shortcuts">Accesos</string>
     <string name="settings_clock">Reloj grande</string>
     <string name="settings_clock_desc">Hora y fecha encima de los accesos de Home</string>
+    <string name="settings_home_layout">Disposición de accesos</string>
+    <string name="settings_home_layout_desc">«Dock» pone los accesos en una fila inferior, solo con iconos, y deja libre la parte de arriba.</string>
+    <string name="settings_home_layout_grid">Rejilla</string>
+    <string name="settings_home_layout_dock">Dock</string>
     <string name="settings_columns">Columnas de accesos</string>
     <string name="settings_columns_theme">Del tema</string>
     <string name="settings_columns_desc">«Del tema» usa las columnas que defina el tema actual.</string>

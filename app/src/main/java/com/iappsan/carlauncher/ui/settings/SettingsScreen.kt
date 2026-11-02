@@ -32,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.iappsan.carlauncher.R
 import com.iappsan.carlauncher.data.DayNightMode
+import com.iappsan.carlauncher.data.HomeLayout
 import com.iappsan.carlauncher.data.Shortcut
 import com.iappsan.carlauncher.data.ShortcutList
 import com.iappsan.carlauncher.data.SpeedUnit
@@ -46,6 +47,7 @@ interface SettingsActions {
 
     // Pantalla
     fun onShowClockChange(show: Boolean)
+    fun onHomeLayoutChange(layout: HomeLayout)
     fun onColumnsChange(columns: Int)
     fun onShowSpeedChange(show: Boolean)
     fun onSpeedUnitChange(unit: SpeedUnit)
@@ -172,6 +174,7 @@ private fun SettingsScreenPreview() {
             actions = object : SettingsActions {
                 override fun onClose() {}
                 override fun onShowClockChange(show: Boolean) {}
+                override fun onHomeLayoutChange(layout: HomeLayout) {}
                 override fun onColumnsChange(columns: Int) {}
                 override fun onShowSpeedChange(show: Boolean) {}
                 override fun onSpeedUnitChange(unit: SpeedUnit) {}
