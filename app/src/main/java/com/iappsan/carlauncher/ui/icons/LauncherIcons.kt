@@ -40,6 +40,22 @@ object LauncherIcons {
         }
     }
 
+    val ArrowUp: ImageVector = icon("ArrowUp") {
+        moveTo(7.41f, 15.41f); lineTo(12f, 10.83f); lineToRelative(4.59f, 4.58f)
+        lineTo(18f, 14f); lineToRelative(-6f, -6f); lineToRelative(-6f, 6f); close()
+    }
+
+    val ArrowDown: ImageVector = icon("ArrowDown") {
+        moveTo(7.41f, 8.59f); lineTo(12f, 13.17f); lineToRelative(4.59f, -4.58f)
+        lineTo(18f, 10f); lineToRelative(-6f, 6f); lineToRelative(-6f, -6f); close()
+    }
+
+    val Close: ImageVector = icon("Close") {
+        moveTo(19f, 6.41f); lineTo(17.59f, 5f); lineTo(12f, 10.59f); lineTo(6.41f, 5f)
+        lineTo(5f, 6.41f); lineTo(10.59f, 12f); lineTo(5f, 17.59f); lineTo(6.41f, 19f)
+        lineTo(12f, 13.41f); lineTo(17.59f, 19f); lineTo(19f, 17.59f); lineTo(13.41f, 12f); close()
+    }
+
     // `PathBuilder.() -> Unit` = lambda "con receptor": dentro, `this` es el PathBuilder,
     // por eso se puede escribir moveTo(...) directamente (así funcionan los DSL de Kotlin).
     private fun icon(name: String, pathData: PathBuilder.() -> Unit): ImageVector =

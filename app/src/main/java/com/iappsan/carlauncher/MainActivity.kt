@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.addCallback
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -20,12 +21,15 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.luminance
 import androidx.core.net.toUri
 import com.iappsan.carlauncher.data.AppEntry
+import com.iappsan.carlauncher.data.DayNightMode
 import com.iappsan.carlauncher.data.Shortcut
 import com.iappsan.carlauncher.data.ShortcutTarget
 import com.iappsan.carlauncher.data.media.MediaListenerService
@@ -39,6 +43,8 @@ import com.iappsan.carlauncher.ui.media.MediaViewModel
 import com.iappsan.carlauncher.ui.media.MediaWidget
 import com.iappsan.carlauncher.ui.settings.SettingsActions
 import com.iappsan.carlauncher.ui.settings.SettingsScreen
+import com.iappsan.carlauncher.ui.settings.SettingsViewModel
+import com.iappsan.carlauncher.ui.settings.ThemeSettingsState
 import com.iappsan.carlauncher.ui.theme.CarLauncherTheme
 import com.iappsan.carlauncher.ui.theme.ThemeBackground
 import com.iappsan.carlauncher.ui.theme.ThemeViewModel
@@ -52,6 +58,7 @@ class MainActivity : ComponentActivity() {
     private val drawerViewModel: DrawerViewModel by viewModels { DrawerViewModel.factory(container) }
     private val mediaViewModel: MediaViewModel by viewModels { MediaViewModel.factory(container) }
     private val themeViewModel: ThemeViewModel by viewModels { ThemeViewModel.factory(container) }
+    private val settingsViewModel: SettingsViewModel by viewModels { SettingsViewModel.factory(container) }
 
     /** Pantallas que se pintan encima de Home. */
     private enum class Overlay { None, Drawer, Settings }
@@ -69,7 +76,21 @@ class MainActivity : ComponentActivity() {
         setContent {
             // collectAsState convierte el StateFlow en estado de Compose: al cambiar, se repinta.
             val homeState by homeViewModel.state.collectAsState()
-            val theme by themeViewModel.theme.collectAsState()
+            // Hasta que carga el tema (decenas de ms) no se pinta nada: se ve el fondo de la ventana
+            // en vez de un frame con los colores equivocados. `?: return@setContent` = salir si es null.
+            val theme = themeViewModel.theme.collectAsState().value ?: return@setContent
+
+            // Iconos de la barra de estado oscuros sobre fondos claros (modo día) y viceversa.
+            val lightBackground = theme.colorScheme.background.luminance() > 0.5f
+            LaunchedEffect(lightBackground) {
+                val style = if (lightBackground) {
+                    SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+                } else {
+                    SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                }
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+            }
+
             CarLauncherTheme(theme) {
                 // Registrado después que el callback no-op, así que tiene prioridad mientras hay un overlay.
                 BackHandler(enabled = overlay != Overlay.None) { closeOverlay() }
@@ -94,13 +115,19 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     OverlayVisibility(overlay == Overlay.Settings) {
+                        val settingsState by settingsViewModel.state.collectAsState()
                         val entries by themeViewModel.entries.collectAsState()
                         val selectedId by themeViewModel.selectedId.collectAsState()
                         SettingsScreen(
-                            entries = entries,
-                            selectedId = selectedId,
-                            currentWarnings = theme.warnings,
-                            themesPath = themeViewModel.userThemesPath,
+                            state = settingsState,
+                            themeState = ThemeSettingsState(
+                                entries = entries,
+                                selectedId = selectedId,
+                                warnings = theme.warnings,
+                                themesPath = themeViewModel.userThemesPath,
+                                isNight = theme.isNight,
+                                hasDayVariant = theme.hasDayVariant,
+                            ),
                             actions = settingsActions,
                         )
                     }
@@ -120,9 +147,11 @@ class MainActivity : ComponentActivity() {
     }
 
     // Solo escuchamos las sesiones de música mientras el launcher está visible.
+    // Y al volver a Home se recalcula si toca día o noche.
     override fun onStart() {
         super.onStart()
         mediaViewModel.onVisible()
+        themeViewModel.onVisible()
     }
 
     override fun onStop() {
@@ -170,9 +199,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private val settingsActions = object : SettingsActions {
+        override fun onClose() = closeOverlay()
+        override fun onShowClockChange(show: Boolean) = settingsViewModel.setShowClock(show)
+        override fun onColumnsChange(columns: Int) = settingsViewModel.setColumns(columns)
+        override fun onDayNightModeChange(mode: DayNightMode) = settingsViewModel.setDayNightMode(mode)
+        override fun onDayStartChange(hour: Int) = settingsViewModel.setDayStartHour(hour)
+        override fun onNightStartChange(hour: Int) = settingsViewModel.setNightStartHour(hour)
+        override fun onMoveShortcut(id: String, delta: Int) = settingsViewModel.moveShortcut(id, delta)
+        override fun onRemoveShortcut(id: String) = settingsViewModel.removeShortcut(id)
+        override fun onResetShortcuts() = settingsViewModel.resetShortcuts()
         override fun onSelectTheme(id: String) = themeViewModel.select(id)
         override fun onReloadThemes() = themeViewModel.refresh()
-        override fun onClose() = closeOverlay()
     }
 
     private val mediaActions = object : MediaActions {

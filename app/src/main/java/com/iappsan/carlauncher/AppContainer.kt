@@ -3,6 +3,7 @@ package com.iappsan.carlauncher
 import android.app.Application
 import android.content.Context
 import com.iappsan.carlauncher.data.AppRepository
+import com.iappsan.carlauncher.data.LauncherSettingsRepository
 import com.iappsan.carlauncher.data.ShortcutRepository
 import com.iappsan.carlauncher.data.media.MediaRepository
 import com.iappsan.carlauncher.theme.ThemeRepository
@@ -12,7 +13,8 @@ class AppContainer(context: Context) {
     val appRepository = AppRepository(context)
     val shortcutRepository = ShortcutRepository(context)
     val mediaRepository = MediaRepository(context)
-    val themeRepository = ThemeRepository(context)
+    val launcherSettingsRepository = LauncherSettingsRepository(context)
+    val themeRepository = ThemeRepository(context, launcherSettingsRepository.isNight)
 }
 
 class CarLauncherApp : Application() {

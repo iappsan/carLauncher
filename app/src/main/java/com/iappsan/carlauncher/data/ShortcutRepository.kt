@@ -40,6 +40,17 @@ class ShortcutRepository(context: Context) {
         current.filterNot { it.id == id && it.target != ShortcutTarget.AppDrawer }
     }
 
+    /** Mueve un acceso [delta] posiciones (-1 = antes, +1 = después). */
+    suspend fun move(id: String, delta: Int) = update { current ->
+        val from = current.indexOfFirst { it.id == id }
+        val to = from + delta
+        if (from < 0 || to !in current.indices) return@update current
+        current.toMutableList().apply { add(to, removeAt(from)) }
+    }
+
+    /** Vuelve a la lista inicial de accesos. */
+    suspend fun resetToDefaults() = update { DEFAULT_SHORTCUTS }
+
     private suspend fun update(transform: (List<Shortcut>) -> List<Shortcut>) {
         // edit{} es transaccional: lee, transforma y escribe de forma atómica.
         dataStore.edit { prefs ->

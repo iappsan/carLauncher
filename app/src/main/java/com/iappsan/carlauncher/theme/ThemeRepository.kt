@@ -42,7 +42,11 @@ data class ThemeEntry(
  * - Del usuario: `getExternalFilesDir("themes")/<carpeta>/` → id `file:<carpeta>`.
  *   (= /sdcard/Android/data/com.iappsan.carlauncher/files/themes, accesible por USB/adb sin permisos.)
  */
-class ThemeRepository(private val context: Context) {
+class ThemeRepository(
+    private val context: Context,
+    /** Si toca la variante de noche; viene de los ajustes del launcher. */
+    isNight: Flow<Boolean>,
+) {
 
     private val dataStore = context.settingsDataStore
     private val reloadSignal = MutableStateFlow(0)
@@ -64,9 +68,9 @@ class ThemeRepository(private val context: Context) {
         .map { it[KEY_THEME] ?: DEFAULT_ID }
         .distinctUntilChanged()
 
-    /** Tema actual cargado; se recarga al cambiar la selección o al llamar a [reload]. */
+    /** Tema actual; se recarga al cambiar la selección, el modo día/noche o al llamar a [reload]. */
     val currentTheme: Flow<LoadedTheme> =
-        combine(selectedThemeId, reloadSignal) { id, _ -> load(id) }
+        combine(selectedThemeId, isNight, reloadSignal) { id, night, _ -> load(id, night) }
             .flowOn(Dispatchers.IO)
 
     suspend fun select(id: String) {
@@ -92,24 +96,25 @@ class ThemeRepository(private val context: Context) {
     }
 
     /** Carga un tema; si falla del todo, vuelve al tema por defecto (con el error como aviso). */
-    private fun load(id: String): LoadedTheme = try {
-        loadOrThrow(id)
+    private fun load(id: String, isNight: Boolean): LoadedTheme = try {
+        loadOrThrow(id, isNight)
     } catch (e: Exception) {
         Log.w(TAG, "No se pudo cargar el tema $id", e)
-        val fallback = if (id != DEFAULT_ID) runCatching { loadOrThrow(DEFAULT_ID) }.getOrNull() else null
+        val fallback = if (id != DEFAULT_ID) runCatching { loadOrThrow(DEFAULT_ID, isNight) }.getOrNull() else null
         (fallback ?: LoadedTheme.Builtin).let { it.copy(warnings = listOf("Tema \"$id\": ${describe(e)}") + it.warnings) }
     }
 
-    private fun loadOrThrow(id: String): LoadedTheme {
+    private fun loadOrThrow(id: String, isNight: Boolean): LoadedTheme {
         val source = sourceFor(id)
         val spec = parse(source)
         val warnings = mutableListOf<String>()
-        val basic = resolveBasic(id, spec, warnings)
+        val basic = resolveBasic(id, spec, isNight, warnings)
         val metrics = context.resources.displayMetrics
         val iconPx = (96 * metrics.density).toInt()
 
         return basic.copy(
-            backgroundImage = spec.background.image?.let { path ->
+            // Solo se decodifica el fondo de la variante activa
+            backgroundImage = spec.backgroundFor(isNight).image?.let { path ->
                 decodeSampled(source, path, metrics.widthPixels, metrics.heightPixels, warnings)
             },
             fontFamily = loadFont(source, spec.font, warnings),

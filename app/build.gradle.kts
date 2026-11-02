@@ -22,9 +22,13 @@ android {
 
     buildTypes {
         release {
+            // Solo para probar el build optimizado en el estéreo/emulador sin crear un keystore.
+            // Antes de distribuir la APK, sustituir por una firma propia.
+            signingConfig = signingConfigs.getByName("debug")
             optimization {
+                // R8 sobre todo el código. (La plantilla traía packageScope = androidx/kotlin/kotlinx,
+                // que optimiza solo librerías y provocaba IllegalAccessError al arrancar.)
                 enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
         }
     }
@@ -49,6 +53,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
+    // Instala los perfiles de arranque de Compose al instalar por adb/USB (sin Play Store): arranque más rápido.
+    implementation(libs.androidx.profileinstaller)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

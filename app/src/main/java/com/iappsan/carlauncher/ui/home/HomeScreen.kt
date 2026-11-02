@@ -75,13 +75,19 @@ fun HomeScreen(
         if (layout.mediaPanelWeight > 0f) {
             Box(Modifier.weight(layout.mediaPanelWeight).fillMaxHeight()) { mediaPanel() }
         }
-        ShortcutGrid(
-            items = state.items,
-            columns = layout.columns,
-            onShortcutClick = onShortcutClick,
-            onShortcutRemove = onShortcutRemove,
+        Column(
             modifier = Modifier.weight(1f - layout.mediaPanelWeight),
-        )
+            verticalArrangement = Arrangement.spacedBy(layout.spacing / 2),
+        ) {
+            if (state.showClock) ClockHeader()
+            ShortcutGrid(
+                items = state.items,
+                columns = layout.columns,
+                onShortcutClick = onShortcutClick,
+                onShortcutRemove = onShortcutRemove,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 

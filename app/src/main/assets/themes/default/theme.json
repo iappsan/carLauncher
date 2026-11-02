@@ -14,6 +14,19 @@
     "secondaryContainer": "#2C333D",
     "onSecondaryContainer": "#DCE3EC"
   },
+  "dayColors": {
+    "background": "#EEF1F5",
+    "onBackground": "#12161C",
+    "surface": "#FFFFFF",
+    "onSurface": "#12161C",
+    "onSurfaceVariant": "#4A5361",
+    "primary": "#0277BD",
+    "onPrimary": "#FFFFFF",
+    "primaryContainer": "#CDE8F7",
+    "onPrimaryContainer": "#00344F",
+    "secondaryContainer": "#DEE4EC",
+    "onSecondaryContainer": "#1E252E"
+  },
   "background": {
     "image": null,
     "dim": 0.0

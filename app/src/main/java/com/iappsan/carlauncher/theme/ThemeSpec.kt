@@ -13,28 +13,66 @@ import kotlinx.serialization.Serializable
 data class ThemeSpec(
     val name: String = "Sin nombre",
     val author: String = "",
+    /** Paleta de noche (o la única, si no hay [dayColors]). */
     val colors: ThemeColors = ThemeColors(),
+    /** Paleta para el modo día. `null` = el tema se ve igual de día que de noche. */
+    val dayColors: ThemeColors? = null,
     val background: BackgroundSpec = BackgroundSpec(),
+    /** Fondo para el modo día. `null` = el mismo [background]. */
+    val dayBackground: BackgroundSpec? = null,
     val font: FontSpec = FontSpec(),
     val layout: LayoutSpec = LayoutSpec(),
     /** Clave: package de la app, o `settings` / `apps` para esos botones. Valor: ruta de imagen. */
     val icons: Map<String, String> = emptyMap(),
 )
 
-/** Colores en `#RRGGBB` o `#AARRGGBB` (con transparencia). */
+/**
+ * Colores en `#RRGGBB` o `#AARRGGBB` (con transparencia). Un campo `null` (ausente en el JSON)
+ * toma el valor de [DarkPalette] o [LightPalette] según si el `background` es oscuro o claro.
+ */
 @Serializable
 data class ThemeColors(
-    val background: String = "#0B0D10",
-    val onBackground: String = "#ECEFF4",
-    val surface: String = "#1A1E24",
-    val onSurface: String = "#ECEFF4",
-    val onSurfaceVariant: String = "#A9B1BC",
-    val primary: String = "#4FC3F7",
-    val onPrimary: String = "#00222F",
-    val primaryContainer: String = "#0D4A63",
-    val onPrimaryContainer: String = "#CDEBFA",
-    val secondaryContainer: String = "#2C333D",
-    val onSecondaryContainer: String = "#DCE3EC",
+    val background: String? = null,
+    val onBackground: String? = null,
+    val surface: String? = null,
+    val onSurface: String? = null,
+    val onSurfaceVariant: String? = null,
+    val primary: String? = null,
+    val onPrimary: String? = null,
+    val primaryContainer: String? = null,
+    val onPrimaryContainer: String? = null,
+    val secondaryContainer: String? = null,
+    val onSecondaryContainer: String? = null,
+)
+
+/** Valores por defecto para temas oscuros (= tema Default de noche). */
+val DarkPalette = ThemeColors(
+    background = "#0B0D10",
+    onBackground = "#ECEFF4",
+    surface = "#1A1E24",
+    onSurface = "#ECEFF4",
+    onSurfaceVariant = "#A9B1BC",
+    primary = "#4FC3F7",
+    onPrimary = "#00222F",
+    primaryContainer = "#0D4A63",
+    onPrimaryContainer = "#CDEBFA",
+    secondaryContainer = "#2C333D",
+    onSecondaryContainer = "#DCE3EC",
+)
+
+/** Valores por defecto para temas claros (= tema Default de día). */
+val LightPalette = ThemeColors(
+    background = "#EEF1F5",
+    onBackground = "#12161C",
+    surface = "#FFFFFF",
+    onSurface = "#12161C",
+    onSurfaceVariant = "#4A5361",
+    primary = "#0277BD",
+    onPrimary = "#FFFFFF",
+    primaryContainer = "#CDE8F7",
+    onPrimaryContainer = "#00344F",
+    secondaryContainer = "#DEE4EC",
+    onSecondaryContainer = "#1E252E",
 )
 
 @Serializable

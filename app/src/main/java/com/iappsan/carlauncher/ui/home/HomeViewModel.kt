@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.iappsan.carlauncher.AppContainer
 import com.iappsan.carlauncher.data.AppRepository
+import com.iappsan.carlauncher.data.LauncherSettingsRepository
 import com.iappsan.carlauncher.data.Shortcut
 import com.iappsan.carlauncher.data.ShortcutRepository
 import com.iappsan.carlauncher.data.ShortcutTarget
@@ -28,21 +29,27 @@ data class ShortcutItem(
 
 data class HomeUiState(
     val items: List<ShortcutItem> = emptyList(),
+    val showClock: Boolean = true,
 )
 
 class HomeViewModel(
     private val shortcutRepository: ShortcutRepository,
     private val appRepository: AppRepository,
+    settingsRepository: LauncherSettingsRepository,
 ) : ViewModel() {
 
     /**
-     * Se recalcula solo cuando cambian los accesos guardados o las apps instaladas.
+     * Se recalcula solo cuando cambian los accesos guardados, las apps instaladas o los ajustes.
      * `combine` emite cada vez que cualquiera de los dos flows emite; `stateIn` lo convierte
      * en un StateFlow que vive mientras viva el ViewModel (viewModelScope).
      */
     val state: StateFlow<HomeUiState> =
-        combine(shortcutRepository.shortcuts, appRepository.changes) { shortcuts, _ ->
-            HomeUiState(items = resolve(shortcuts))
+        combine(
+            shortcutRepository.shortcuts,
+            appRepository.changes,
+            settingsRepository.settings,
+        ) { shortcuts, _, settings ->
+            HomeUiState(items = resolve(shortcuts), showClock = settings.showClock)
         }
             .flowOn(Dispatchers.Default) // el trabajo de arriba (iconos, lista de apps) va en segundo plano
             .stateIn(viewModelScope, SharingStarted.Eagerly, HomeUiState())
@@ -71,7 +78,9 @@ class HomeViewModel(
 
     companion object {
         fun factory(container: AppContainer) = viewModelFactory {
-            initializer { HomeViewModel(container.shortcutRepository, container.appRepository) }
+            initializer {
+                HomeViewModel(container.shortcutRepository, container.appRepository, container.launcherSettingsRepository)
+            }
         }
     }
 }

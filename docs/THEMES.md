@@ -113,8 +113,10 @@ tema puede ser tan corto como:
 |---|---|---|---|
 | `name` | texto | `"Sin nombre"` | Nombre que aparece en el selector. |
 | `author` | texto | `""` | Autor (solo informativo). |
-| `colors` | objeto | ver abajo | Paleta. |
+| `colors` | objeto | ver abajo | Paleta de noche (o la única). |
+| `dayColors` | objeto \| `null` | `null` | Paleta para el modo día. Sin ella, el tema se ve igual a cualquier hora. |
 | `background` | objeto | sin imagen | Fondo. |
+| `dayBackground` | objeto \| `null` | `null` | Fondo para el modo día. Sin él, se usa `background`. |
 | `font` | objeto | `sans-serif` | Tipografía. |
 | `layout` | objeto | ver abajo | Distribución. |
 | `icons` | mapa | `{}` | Iconos personalizados. |
@@ -122,6 +124,11 @@ tema puede ser tan corto como:
 ### `colors`
 
 Formato `#RRGGBB` o `#AARRGGBB` (el primer par es la opacidad: `FF` opaco, `00` transparente).
+`dayColors` tiene los mismos campos.
+
+Los campos que falten se rellenan con la paleta oscura por defecto (la de la tabla) o, si el
+`background` que has puesto es claro, con la paleta clara por defecto (la de `dayColors` del tema
+Default). Así un `dayColors` con solo un par de colores también queda coherente.
 
 | Campo | Defecto | Dónde se usa |
 |---|---|---|
@@ -137,8 +144,21 @@ Formato `#RRGGBB` o `#AARRGGBB` (el primer par es la opacidad: `FF` opaco, `00` 
 | `secondaryContainer` | `#2C333D` | Botones anterior/siguiente, Ajustes/Cerrar, fondos de iconos que faltan. |
 | `onSecondaryContainer` | `#DCE3EC` | Iconos/texto sobre `secondaryContainer`. |
 
-Si `background` es claro (luminancia > 50 %), los colores que el tema no define se toman de una base
-clara en vez de oscura.
+### Modo día / noche
+
+El launcher elige la variante en Ajustes → Día y noche: automático por horario (por defecto, día de
+07:00 a 19:00), siempre noche o siempre día. En automático se decide al arrancar y cada vez que se
+vuelve a Home, no en mitad del uso.
+
+- **Noche** → `colors` + `background`.
+- **Día** → `dayColors` + `dayBackground`; lo que falte se toma de la variante de noche.
+
+Ejemplo mínimo de variante de día:
+
+```jsonc
+"dayColors": { "background": "#F4F1EA", "surface": "#FFFFFF", "primary": "#B8452A" },
+"dayBackground": { "image": "background-day.webp", "dim": 0.0 }
+```
 
 ### `background`
 
@@ -163,7 +183,7 @@ Los valores fuera de rango se ajustan al límite más cercano.
 
 | Campo | Rango | Defecto | Descripción |
 |---|---|---|---|
-| `columns` | 1–6 | `3` | Columnas de la rejilla de accesos. |
+| `columns` | 1–6 | `3` | Columnas de la rejilla de accesos (el usuario puede forzar otro valor en Ajustes → Pantalla). |
 | `cornerRadius` | 0–48 dp | `24` | Esquinas de botones y paneles. |
 | `spacing` | 4–32 dp | `16` | Separación entre botones y márgenes. |
 | `mediaPanelWeight` | 0.0–0.6 | `0.38` | Fracción del ancho para el widget de música. `0` lo oculta. |
