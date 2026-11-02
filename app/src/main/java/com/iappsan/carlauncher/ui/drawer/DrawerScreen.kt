@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -63,6 +64,8 @@ interface DrawerActions {
     fun onAddToHome(app: AppEntry)
     fun onAddToNavigation(app: AppEntry)
     fun onAppInfo(app: AppEntry)
+    fun onSetHidden(app: AppEntry, hidden: Boolean)
+    fun onToggleHiddenView()
     fun onOpenSettings()
     fun onClose()
 }
@@ -87,6 +90,9 @@ fun DrawerScreen(
                 onQueryChange = actions::onQueryChange,
                 // "Buscar" en el teclado abre el primer resultado
                 onSearch = { state.apps.firstOrNull()?.let(actions::onLaunch) },
+                showingHidden = state.showingHidden,
+                hiddenCount = state.hiddenCount,
+                onToggleHiddenView = actions::onToggleHiddenView,
                 onOpenSettings = actions::onOpenSettings,
                 onClose = actions::onClose,
             )
@@ -95,7 +101,12 @@ fun DrawerScreen(
             when {
                 state.loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
                 state.apps.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Text(stringResource(R.string.drawer_empty), style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        stringResource(
+                            if (state.showingHidden && query.isBlank()) R.string.drawer_no_hidden else R.string.drawer_empty,
+                        ),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
                 }
                 else -> LazyVerticalGrid(
                     // Adaptive: tantas columnas de ≥120dp como quepan (≈8 en 1024×600 a 160dpi)
@@ -109,7 +120,8 @@ fun DrawerScreen(
                         AppCell(
                             app = app,
                             onHome = app.packageName in state.homePackages,
-                        onNav = app.packageName in state.navPackages,
+                            onNav = app.packageName in state.navPackages,
+                            hidden = state.showingHidden,
                             iconLoader = iconLoader,
                             actions = actions,
                         )
@@ -125,6 +137,9 @@ private fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
+    showingHidden: Boolean,
+    hiddenCount: Int,
+    onToggleHiddenView: () -> Unit,
     onOpenSettings: () -> Unit,
     onClose: () -> Unit,
 ) {
@@ -134,7 +149,9 @@ private fun SearchBar(
             value = query,
             onValueChange = onQueryChange,
             modifier = Modifier.weight(1f),
-            placeholder = { Text(stringResource(R.string.drawer_search_hint)) },
+            placeholder = {
+                Text(stringResource(if (showingHidden) R.string.drawer_search_hidden_hint else R.string.drawer_search_hint))
+            },
             singleLine = true,
             shape = RoundedCornerShape(16.dp),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -143,6 +160,21 @@ private fun SearchBar(
                 onSearch()
             }),
         )
+        // Botón del "cajón de ocultas": solo aparece si hay alguna (o si ya se está dentro).
+        if (showingHidden || hiddenCount > 0) {
+            Spacer(Modifier.size(12.dp))
+            val label = if (showingHidden) stringResource(R.string.drawer_show_all)
+            else stringResource(R.string.drawer_show_hidden, hiddenCount)
+            if (showingHidden) {
+                Button(onClick = onToggleHiddenView, modifier = Modifier.height(56.dp)) {
+                    Text(label, style = MaterialTheme.typography.titleMedium)
+                }
+            } else {
+                FilledTonalButton(onClick = onToggleHiddenView, modifier = Modifier.height(56.dp)) {
+                    Text(label, style = MaterialTheme.typography.titleMedium)
+                }
+            }
+        }
         Spacer(Modifier.size(12.dp))
         FilledTonalButton(onClick = onOpenSettings, modifier = Modifier.height(56.dp)) {
             Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.titleMedium)
@@ -159,6 +191,8 @@ private fun AppCell(
     app: AppEntry,
     onHome: Boolean,
     onNav: Boolean,
+    /** La celda está en el cajón de ocultas: el menú ofrece "Mostrar" en vez de "Ocultar". */
+    hidden: Boolean,
     iconLoader: IconLoader,
     actions: DrawerActions,
 ) {
@@ -217,6 +251,13 @@ private fun AppCell(
                 },
             )
             DropdownMenuItem(
+                text = { Text(stringResource(if (hidden) R.string.unhide_app else R.string.hide_app)) },
+                onClick = {
+                    menuOpen = false
+                    actions.onSetHidden(app, !hidden)
+                },
+            )
+            DropdownMenuItem(
                 text = { Text(stringResource(R.string.app_info)) },
                 onClick = {
                     menuOpen = false
@@ -263,6 +304,8 @@ private fun DrawerScreenPreview() {
         override fun onAddToHome(app: AppEntry) {}
         override fun onAddToNavigation(app: AppEntry) {}
         override fun onAppInfo(app: AppEntry) {}
+        override fun onSetHidden(app: AppEntry, hidden: Boolean) {}
+        override fun onToggleHiddenView() {}
         override fun onOpenSettings() {}
         override fun onClose() {}
     }

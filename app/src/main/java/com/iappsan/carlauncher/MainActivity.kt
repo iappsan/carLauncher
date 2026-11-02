@@ -276,7 +276,7 @@ class MainActivity : ComponentActivity() {
 
     private fun closeOverlay() {
         overlay = Overlay.None
-        drawerViewModel.onQueryChange("")
+        drawerViewModel.resetView()
     }
 
     private val drawerActions = object : DrawerActions {
@@ -303,6 +303,13 @@ class MainActivity : ComponentActivity() {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             app.label,
         )
+
+        override fun onSetHidden(app: AppEntry, hidden: Boolean) {
+            drawerViewModel.setHidden(app, hidden)
+            toast(getString(if (hidden) R.string.app_hidden else R.string.app_unhidden, app.label))
+        }
+
+        override fun onToggleHiddenView() = drawerViewModel.toggleHiddenView()
 
         override fun onOpenSettings() {
             themeViewModel.refresh() // busca temas nuevos copiados desde la última vez

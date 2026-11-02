@@ -5,6 +5,14 @@
     <string name="drawer_search_hint">Buscar apps</string>
     <string name="drawer_close">Cerrar</string>
     <string name="drawer_empty">Sin resultados</string>
+    <string name="drawer_no_hidden">No hay apps ocultas</string>
+    <string name="drawer_search_hidden_hint">Buscar en ocultas</string>
+    <string name="drawer_show_hidden">Ocultas (%1$d)</string>
+    <string name="drawer_show_all">Ver todas</string>
+    <string name="hide_app">Ocultar</string>
+    <string name="unhide_app">Mostrar en el cajón</string>
+    <string name="app_hidden">%1$s oculta</string>
+    <string name="app_unhidden">%1$s visible de nuevo</string>
     <string name="add_to_home">Agregar a Home</string>
     <string name="already_on_home">Ya está en Home</string>
     <string name="added_to_home">%1$s agregada a Home</string>

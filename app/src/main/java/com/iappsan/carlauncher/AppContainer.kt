@@ -7,6 +7,7 @@ import com.iappsan.carlauncher.data.DayNightRepository
 import com.iappsan.carlauncher.data.LauncherSettingsRepository
 import com.iappsan.carlauncher.data.ShortcutRepository
 import com.iappsan.carlauncher.data.bluetooth.BluetoothRepository
+import com.iappsan.carlauncher.data.HiddenAppsRepository
 import com.iappsan.carlauncher.data.location.LocationRepository
 import com.iappsan.carlauncher.data.media.MediaRepository
 import com.iappsan.carlauncher.data.navigation.NavigationRepository
@@ -16,6 +17,7 @@ import com.iappsan.carlauncher.theme.ThemeRepository
 class AppContainer(context: Context) {
     val appRepository = AppRepository(context)
     val shortcutRepository = ShortcutRepository(context)
+    val hiddenAppsRepository = HiddenAppsRepository(context)
     val mediaRepository = MediaRepository(context)
     val launcherSettingsRepository = LauncherSettingsRepository(context)
     val locationRepository = LocationRepository(context)

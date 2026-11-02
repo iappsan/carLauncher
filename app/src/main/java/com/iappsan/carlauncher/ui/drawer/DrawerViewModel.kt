@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.iappsan.carlauncher.AppContainer
 import com.iappsan.carlauncher.data.AppEntry
 import com.iappsan.carlauncher.data.AppRepository
+import com.iappsan.carlauncher.data.HiddenAppsRepository
 import com.iappsan.carlauncher.data.ShortcutList
 import com.iappsan.carlauncher.data.ShortcutRepository
 import com.iappsan.carlauncher.data.ShortcutTarget
@@ -30,12 +31,16 @@ data class DrawerUiState(
     val homePackages: Set<String> = emptySet(),
     /** Packages que ya tienen acceso en la vista de navegación. */
     val navPackages: Set<String> = emptySet(),
+    /** Se está viendo el "cajón de ocultas" en vez del normal. */
+    val showingHidden: Boolean = false,
+    val hiddenCount: Int = 0,
     val loading: Boolean = true,
 )
 
 class DrawerViewModel(
     private val appRepository: AppRepository,
     private val shortcutRepository: ShortcutRepository,
+    private val hiddenAppsRepository: HiddenAppsRepository,
 ) : ViewModel() {
 
     /**
@@ -45,6 +50,9 @@ class DrawerViewModel(
      */
     var query by mutableStateOf("")
         private set
+
+    /** `true` = se muestran solo las apps ocultas. */
+    private var showHidden by mutableStateOf(false)
 
     private val allApps = appRepository.changes.map { appRepository.installedApps() }
 
@@ -60,8 +68,27 @@ class DrawerViewModel(
             snapshotFlow { query },
             packagesIn(ShortcutList.Home),
             packagesIn(ShortcutList.Navigation),
-        ) { apps, q, onHome, onNav ->
-            DrawerUiState(apps = filter(apps, q), homePackages = onHome, navPackages = onNav, loading = false)
+            hiddenAppsRepository.hidden,
+            snapshotFlow { showHidden },
+        ) { values ->
+            // combine con más de 5 flows recibe un Array<Any?>: se recupera cada valor con un cast.
+            @Suppress("UNCHECKED_CAST")
+            val apps = values[0] as List<AppEntry>
+            val q = values[1] as String
+            @Suppress("UNCHECKED_CAST")
+            val hidden = values[4] as Set<String>
+            val inHiddenView = values[5] as Boolean
+            // `partition` separa una lista en dos según la condición: (las que cumplen, las que no).
+            val (hiddenApps, visibleApps) = apps.partition { it.component.flattenToString() in hidden }
+            @Suppress("UNCHECKED_CAST")
+            DrawerUiState(
+                apps = filter(if (inHiddenView) hiddenApps else visibleApps, q),
+                homePackages = values[2] as Set<String>,
+                navPackages = values[3] as Set<String>,
+                showingHidden = inHiddenView,
+                hiddenCount = hiddenApps.size,
+                loading = false,
+            )
         }
             .flowOn(Dispatchers.Default)
             // WhileSubscribed: deja de trabajar 5 s después de cerrar el cajón.
@@ -69,6 +96,20 @@ class DrawerViewModel(
 
     fun onQueryChange(value: String) {
         query = value
+    }
+
+    fun toggleHiddenView() {
+        showHidden = !showHidden
+    }
+
+    /** Al cerrar el cajón se vuelve a la vista normal. */
+    fun resetView() {
+        showHidden = false
+        query = ""
+    }
+
+    fun setHidden(app: AppEntry, hidden: Boolean) {
+        viewModelScope.launch { hiddenAppsRepository.setHidden(app.component, hidden) }
     }
 
     fun addTo(list: ShortcutList, app: AppEntry) {
@@ -89,7 +130,7 @@ class DrawerViewModel(
             Normalizer.normalize(this, Normalizer.Form.NFD).replace(DIACRITICS, "").lowercase()
 
         fun factory(container: AppContainer) = viewModelFactory {
-            initializer { DrawerViewModel(container.appRepository, container.shortcutRepository) }
+            initializer { DrawerViewModel(container.appRepository, container.shortcutRepository, container.hiddenAppsRepository) }
         }
     }
 }
