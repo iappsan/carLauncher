@@ -1,0 +1,25 @@
+{
+  "name": "Grafito",
+  "author": "CarLauncher",
+  "colors": {
+    "background": "#17191C",
+    "onBackground": "#F0F0ED",
+    "surface": "#25282D",
+    "onSurface": "#F0F0ED",
+    "onSurfaceVariant": "#C0C2C5",
+    "primary": "#E4B86A",
+    "onPrimary": "#33240A",
+    "primaryContainer": "#684F2D",
+    "onPrimaryContainer": "#FFEBC9",
+    "secondaryContainer": "#383A3E",
+    "onSecondaryContainer": "#E4E3DF"
+  },
+  "layout": {
+    "columns": 3,
+    "cornerRadius": 24,
+    "spacing": 16,
+    "mediaPanelWeight": 0.38,
+    "iconSize": 60,
+    "showLabels": true
+  }
+}

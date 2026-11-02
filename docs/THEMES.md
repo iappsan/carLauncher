@@ -24,6 +24,13 @@ mi-tema/
 La carpeta del usuario no necesita permisos: es el almacenamiento propio de la app. La ruta exacta
 aparece en la pantalla de Ajustes (la carpeta `themes` se crea la primera vez que abres Ajustes).
 
+### Temas incluidos
+
+Además de **Default**, el selector ofrece cinco paletas integradas, listas para usar sin copiar
+archivos: **Bosque** (verde natural), **Océano** (azul sereno), **Grafito** (gris cálido con ámbar),
+**Lavanda** (violeta suave) y **Tierra** (tonos terrosos). Son oscuras y usan acentos moderados para
+mantener la lectura cómoda en el estéreo.
+
 ### Copiar por adb
 
 ```bash

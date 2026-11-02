@@ -1,0 +1,25 @@
+{
+  "name": "Océano",
+  "author": "CarLauncher",
+  "colors": {
+    "background": "#101820",
+    "onBackground": "#E8F1F6",
+    "surface": "#1C2A34",
+    "onSurface": "#E8F1F6",
+    "onSurfaceVariant": "#B3C4CF",
+    "primary": "#83C8D8",
+    "onPrimary": "#062A33",
+    "primaryContainer": "#285565",
+    "onPrimaryContainer": "#D8F3F8",
+    "secondaryContainer": "#293A45",
+    "onSecondaryContainer": "#D7E5EB"
+  },
+  "layout": {
+    "columns": 3,
+    "cornerRadius": 26,
+    "spacing": 16,
+    "mediaPanelWeight": 0.38,
+    "iconSize": 60,
+    "showLabels": true
+  }
+}

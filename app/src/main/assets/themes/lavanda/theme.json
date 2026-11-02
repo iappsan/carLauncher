@@ -1,0 +1,25 @@
+{
+  "name": "Lavanda",
+  "author": "CarLauncher",
+  "colors": {
+    "background": "#191722",
+    "onBackground": "#F0EDF7",
+    "surface": "#272433",
+    "onSurface": "#F0EDF7",
+    "onSurfaceVariant": "#C4BED2",
+    "primary": "#C0B2E5",
+    "onPrimary": "#29213B",
+    "primaryContainer": "#51466F",
+    "onPrimaryContainer": "#EEE8FF",
+    "secondaryContainer": "#393447",
+    "onSecondaryContainer": "#E5DFF0"
+  },
+  "layout": {
+    "columns": 3,
+    "cornerRadius": 28,
+    "spacing": 16,
+    "mediaPanelWeight": 0.38,
+    "iconSize": 60,
+    "showLabels": true
+  }
+}

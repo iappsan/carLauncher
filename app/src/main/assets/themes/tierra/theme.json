@@ -1,0 +1,25 @@
+{
+  "name": "Tierra",
+  "author": "CarLauncher",
+  "colors": {
+    "background": "#1C1714",
+    "onBackground": "#F3ECE5",
+    "surface": "#2B231F",
+    "onSurface": "#F3ECE5",
+    "onSurfaceVariant": "#D0BFB1",
+    "primary": "#D9A987",
+    "onPrimary": "#382014",
+    "primaryContainer": "#694936",
+    "onPrimaryContainer": "#FBE7D7",
+    "secondaryContainer": "#40332C",
+    "onSecondaryContainer": "#E8D8CA"
+  },
+  "layout": {
+    "columns": 3,
+    "cornerRadius": 28,
+    "spacing": 16,
+    "mediaPanelWeight": 0.38,
+    "iconSize": 60,
+    "showLabels": true
+  }
+}

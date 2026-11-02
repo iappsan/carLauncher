@@ -1,0 +1,25 @@
+{
+  "name": "Bosque",
+  "author": "CarLauncher",
+  "colors": {
+    "background": "#101A17",
+    "onBackground": "#E8F0EA",
+    "surface": "#1D2A25",
+    "onSurface": "#E8F0EA",
+    "onSurfaceVariant": "#B2C4B8",
+    "primary": "#8BC7A5",
+    "onPrimary": "#10271B",
+    "primaryContainer": "#315B45",
+    "onPrimaryContainer": "#E0F2E6",
+    "secondaryContainer": "#293B32",
+    "onSecondaryContainer": "#D4E4D9"
+  },
+  "layout": {
+    "columns": 3,
+    "cornerRadius": 26,
+    "spacing": 16,
+    "mediaPanelWeight": 0.38,
+    "iconSize": 60,
+    "showLabels": true
+  }
+}
