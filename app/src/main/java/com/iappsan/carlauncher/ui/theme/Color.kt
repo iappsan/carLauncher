@@ -2,10 +2,13 @@ package com.iappsan.carlauncher.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
-
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// Paleta oscura por defecto (en la fase 4 la sustituirá el tema cargado desde theme.json)
+val Background = Color(0xFF0B0D10)
+val Surface = Color(0xFF1A1E24)
+val OnSurface = Color(0xFFECEFF4)
+val Primary = Color(0xFF4FC3F7)
+val OnPrimary = Color(0xFF00222F)
+val PrimaryContainer = Color(0xFF0D4A63)
+val OnPrimaryContainer = Color(0xFFCDEBFA)
+val SecondaryContainer = Color(0xFF2C333D)
+val OnSecondaryContainer = Color(0xFFDCE3EC)

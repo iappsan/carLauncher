@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">CarLauncher</string>
+    <string name="app_not_installed">%1$s no está instalada</string>
+    <string name="cannot_open">No se pudo abrir %1$s</string>
+    <string name="drawer_coming_soon">El cajón de apps llega en la fase 2</string>
 </resources>
